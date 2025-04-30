@@ -6,7 +6,7 @@
   "scripts": {
     "dist": "tsup src",
     "start:dev": "tsx --env-file=.env src/index.ts",
-    "start:dist": "npm run dist && node --env-file=.env dist/index.js",
+    "start": "npm run dist && node --env-file=.env dist/index.js",
     "build": "npm run dist"
   },
   "keywords": [],
