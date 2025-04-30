@@ -10,7 +10,7 @@ export const getCategoryService = async():Promise<HttpResponseModel>=>{
     let response
     
     if(data.length>0){
-        response = await ok({data, message:'ok'})
+        response = await ok(data)
     }
     else{
         response = await noContent()

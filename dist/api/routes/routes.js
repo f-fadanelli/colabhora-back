@@ -122,7 +122,7 @@ var getCategoryService = () => __async(null, null, function* () {
   const data = yield findAllCategories();
   let response;
   if (data.length > 0) {
-    response = yield ok({ data, message: "ok" });
+    response = yield ok(data);
   } else {
     response = yield noContent();
   }
