@@ -15,8 +15,13 @@ export const validate = (schema: ZodSchema, location: RequestDataLocation) => {
         res.status(response.statusCode).json(response.body)
         return
     }
-    
-    req[location] = result.data;
-    next();
-  };
-};
+
+    if (!req.validated) {
+      req.validated = {}
+    }
+
+    req.validated[location] = result.data
+
+    next()
+  }
+}

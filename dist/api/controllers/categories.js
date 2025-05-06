@@ -212,15 +212,18 @@ var patchCategoryByIdService = (category) => __async(null, null, function* () {
 
 // src/api/controllers/categories.ts
 var getCategories = (req, res) => __async(null, null, function* () {
-  const response = yield getCategoryService(req.query);
+  var _a;
+  const response = yield getCategoryService((_a = req.validated) == null ? void 0 : _a.query);
   res.status(response.statusCode).json(response.body);
 });
 var postCategory = (req, res) => __async(null, null, function* () {
-  const response = yield postCategoryService(req.body);
+  var _a;
+  const response = yield postCategoryService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 var patchCategoryById = (req, res) => __async(null, null, function* () {
-  const response = yield patchCategoryByIdService(req.body);
+  var _a;
+  const response = yield patchCategoryByIdService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 // Annotate the CommonJS export names for ESM import in node:

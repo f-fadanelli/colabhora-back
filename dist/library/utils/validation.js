@@ -62,7 +62,10 @@ var validate = (schema, location) => {
       res.status(response.statusCode).json(response.body);
       return;
     }
-    req[location] = result.data;
+    if (!req.validated) {
+      req.validated = {};
+    }
+    req.validated[location] = result.data;
     next();
   });
 };

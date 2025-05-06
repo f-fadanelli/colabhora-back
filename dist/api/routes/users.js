@@ -319,23 +319,28 @@ var patchUserByIdService = (user2) => __async(null, null, function* () {
 
 // src/api/controllers/users.ts
 var getUsers = (req, res) => __async(null, null, function* () {
-  const response = yield getUserService(req.query);
+  var _a;
+  const response = yield getUserService((_a = req.validated) == null ? void 0 : _a.query);
   res.status(response.statusCode).json(response.body);
 });
 var getUserSkills = (req, res) => __async(null, null, function* () {
-  const response = yield getUserSkillsService(req.query);
+  var _a;
+  const response = yield getUserSkillsService((_a = req.validated) == null ? void 0 : _a.query);
   res.status(response.statusCode).json(response.body);
 });
 var postUserLogin = (req, res) => __async(null, null, function* () {
-  const response = yield validateUserLoginService(req.body);
+  var _a;
+  const response = yield validateUserLoginService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 var postUser = (req, res) => __async(null, null, function* () {
-  const response = yield postUserService(req.body);
+  var _a;
+  const response = yield postUserService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 var patchUserById = (req, res) => __async(null, null, function* () {
-  const response = yield patchUserByIdService(req.body);
+  var _a;
+  const response = yield patchUserByIdService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 
@@ -388,7 +393,10 @@ var validate = (schema, location) => {
       res.status(response.statusCode).json(response.body);
       return;
     }
-    req[location] = result.data;
+    if (!req.validated) {
+      req.validated = {};
+    }
+    req.validated[location] = result.data;
     next();
   });
 };

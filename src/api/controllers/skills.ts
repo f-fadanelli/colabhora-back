@@ -4,21 +4,21 @@ import { getSkillService, patchSkillByIdService, postSkillService } from "../ser
 
 export const getSkills = async (req: Request, res: Response)=>{
     
-    const response:HttpResponseModel = await getSkillService(req.query)
+    const response:HttpResponseModel = await getSkillService(req.validated?.query)
 
     res.status(response.statusCode).json(response.body)
 }
 
 export const postSkill = async (req: Request, res: Response)=>{
     
-    const response:HttpResponseModel = await postSkillService(req.body)
+    const response:HttpResponseModel = await postSkillService(req.validated?.body)
 
     res.status(response.statusCode).json(response.body)
 }
 
 export const patchSkillById  = async (req: Request, res: Response)=>{
 
-    const response:HttpResponseModel = await patchSkillByIdService(req.body)
+    const response:HttpResponseModel = await patchSkillByIdService(req.validated?.body)
 
     res.status(response.statusCode).json(response.body)
 }

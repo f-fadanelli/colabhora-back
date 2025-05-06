@@ -212,15 +212,18 @@ var patchSkillByIdService = (skill) => __async(null, null, function* () {
 
 // src/api/controllers/skills.ts
 var getSkills = (req, res) => __async(null, null, function* () {
-  const response = yield getSkillService(req.query);
+  var _a;
+  const response = yield getSkillService((_a = req.validated) == null ? void 0 : _a.query);
   res.status(response.statusCode).json(response.body);
 });
 var postSkill = (req, res) => __async(null, null, function* () {
-  const response = yield postSkillService(req.body);
+  var _a;
+  const response = yield postSkillService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 var patchSkillById = (req, res) => __async(null, null, function* () {
-  const response = yield patchSkillByIdService(req.body);
+  var _a;
+  const response = yield patchSkillByIdService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
 // Annotate the CommonJS export names for ESM import in node:
