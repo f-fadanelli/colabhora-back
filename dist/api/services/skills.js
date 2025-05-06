@@ -37,14 +37,14 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/api/services/categories.ts
-var categories_exports = {};
-__export(categories_exports, {
-  getCategoryService: () => getCategoryService,
-  patchCategoryByIdService: () => patchCategoryByIdService,
-  postCategoryService: () => postCategoryService
+// src/api/services/skills.ts
+var skills_exports = {};
+__export(skills_exports, {
+  getSkillService: () => getSkillService,
+  patchSkillByIdService: () => patchSkillByIdService,
+  postSkillService: () => postSkillService
 });
-module.exports = __toCommonJS(categories_exports);
+module.exports = __toCommonJS(skills_exports);
 
 // src/library/database/postgressql.ts
 var import_pg = require("pg");
@@ -79,66 +79,66 @@ var buildWhereClause = (filters) => {
   return { clause, values };
 };
 
-// src/library/repositories/categories.ts
-var findAllCategories = (..._0) => __async(null, [..._0], function* (filter = {}) {
+// src/library/repositories/skills.ts
+var findAllSkills = (..._0) => __async(null, [..._0], function* (filter = {}) {
   let result;
   const client = yield postgressql_default;
   const { clause, values } = buildWhereClause(filter);
-  const query = `SELECT * FROM TB_CATEGORIA ${clause} ORDER BY ID_CATEGORIA DESC`;
+  const query = `SELECT * FROM TB_HABILIDADE ${clause} ORDER BY ID_HABILIDADE DESC`;
   result = yield client.query(query, values);
   return result.rows;
 });
-var insertCategory = (category) => __async(null, null, function* () {
+var insertSkill = (skill) => __async(null, null, function* () {
   var _a;
   const client = yield postgressql_default;
   try {
     yield client.query("BEGIN");
-    const { nom_categoria } = category;
+    const { nom_habilidade } = skill;
     const insertQuery = `
-            INSERT INTO TB_CATEGORIA (nom_categoria)
+            INSERT INTO TB_HABILIDADE (nom_habilidade)
             VALUES ($1)
-            RETURNING id_categoria;
+            RETURNING id_habilidade;
         `;
-    const values = [nom_categoria];
+    const values = [nom_habilidade];
     const result = yield client.query(insertQuery, values);
-    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_categoria;
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_habilidade;
     yield client.query("COMMIT");
     return {
       success: true,
-      message: "Categoria inserida com sucesso",
+      message: "Habilidade inserida com sucesso",
       id
     };
   } catch (err) {
     yield client.query("ROLLBACK");
     return {
       success: false,
-      message: "Erro ao inserir categoria",
+      message: "Erro ao inserir habilidade",
       error: err.message
     };
   }
 });
-var updateCategory = (category) => __async(null, null, function* () {
+var updateSkill = (skill) => __async(null, null, function* () {
   const client = yield postgressql_default;
   try {
     yield client.query("BEGIN");
-    const { nom_categoria, id_categoria } = category;
+    const { nom_habilidade, id_habilidade } = skill;
     const updateQuery = `
-            UPDATE TB_CATEGORIA SET NOM_CATEGORIA = $1
-                WHERE ID_CATEGORIA = $2
+            UPDATE TB_HABILIDADE SET NOM_HABILIDADE = $1
+                WHERE ID_HABILIDADE = $2
         `;
-    const values = [nom_categoria, id_categoria];
+    const values = [nom_habilidade, id_habilidade];
     yield client.query(updateQuery, values);
     yield client.query("COMMIT");
     return {
       success: true,
-      message: "Categoria atualizada com sucesso",
-      id: id_categoria
+      message: "Habilidade atualizada com sucesso",
+      id: id_habilidade
     };
   } catch (err) {
     yield client.query("ROLLBACK");
     return {
       success: false,
-      message: "Erro ao atualizar categoria",
+      message: "Erro ao atualizar habilidade",
       error: err.message
     };
   }
@@ -170,9 +170,9 @@ var badRequest = (message) => __async(null, null, function* () {
   };
 });
 
-// src/api/services/categories.ts
-var getCategoryService = (filter) => __async(null, null, function* () {
-  const data = yield findAllCategories(filter);
+// src/api/services/skills.ts
+var getSkillService = (filter) => __async(null, null, function* () {
+  const data = yield findAllSkills(filter);
   let response;
   if (data.length > 0) {
     response = yield ok(data);
@@ -181,13 +181,13 @@ var getCategoryService = (filter) => __async(null, null, function* () {
   }
   return response;
 });
-var postCategoryService = (category) => __async(null, null, function* () {
-  const data = yield findAllCategories({ "nom_categoria": category.nom_categoria });
+var postSkillService = (skill) => __async(null, null, function* () {
+  const data = yield findAllSkills({ "nom_habilidade": skill.nom_habilidade });
   let response;
   if (data.length > 0) {
-    response = yield badRequest("Categoria com o nome informado j\xE1 foi cadastrada!");
+    response = yield badRequest("Habilidade com o nome informado j\xE1 foi cadastrada!");
   } else {
-    const result = yield insertCategory(category);
+    const result = yield insertSkill(skill);
     if (result.success) {
       response = yield created(result.id);
     } else
@@ -195,13 +195,13 @@ var postCategoryService = (category) => __async(null, null, function* () {
   }
   return response;
 });
-var patchCategoryByIdService = (category) => __async(null, null, function* () {
-  const data = yield findAllCategories({ "nom_categoria": category.nom_categoria });
+var patchSkillByIdService = (skill) => __async(null, null, function* () {
+  const data = yield findAllSkills({ "nom_habilidade": skill.nom_habilidade });
   let response;
-  if (data.length > 0 && data[0].id_categoria != category.id_categoria) {
-    response = yield badRequest("Categoria com o nome informado j\xE1 foi cadastrada!");
+  if (data.length > 0 && data[0].id_habilidade != skill.id_habilidade) {
+    response = yield badRequest("Habilidade com o nome informado j\xE1 foi cadastrada!");
   } else {
-    const result = yield updateCategory(category);
+    const result = yield updateSkill(skill);
     if (result.success) {
       response = yield ok(result.message);
     } else
@@ -211,7 +211,7 @@ var patchCategoryByIdService = (category) => __async(null, null, function* () {
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  getCategoryService,
-  patchCategoryByIdService,
-  postCategoryService
+  getSkillService,
+  patchSkillByIdService,
+  postSkillService
 });

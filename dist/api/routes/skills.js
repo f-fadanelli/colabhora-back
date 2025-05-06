@@ -47,110 +47,12 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/api/routes/categories.ts
-var categories_exports = {};
-__export(categories_exports, {
-  default: () => categories_default
+// src/api/routes/skills.ts
+var skills_exports = {};
+__export(skills_exports, {
+  default: () => skills_default
 });
-module.exports = __toCommonJS(categories_exports);
-
-// src/library/database/postgressql.ts
-var import_pg = require("pg");
-var user = process.env.POSTGRES_USER;
-var host = process.env.POSTGRES_HOST;
-var database = process.env.POSTGRES_DATABASE;
-var password = process.env.POSTGRES_PASSWORD;
-var pool = new import_pg.Pool({
-  connectionString: `postgres://${user}:${password}@${host}/${database}?sslmode=require`,
-  idleTimeoutMillis: 3e3
-});
-var poolPromise = pool.connect().then((pool2) => {
-  console.log("Connected to Postgtresql");
-  return pool2;
-}).catch((err) => {
-  console.error("Connection failed! Bad config:", err);
-  throw err;
-});
-var postgressql_default = poolPromise;
-
-// src/library/utils/queryBuilder.ts
-var buildWhereClause = (filters) => {
-  const conditions = [];
-  const values = [];
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== void 0 && value !== null) {
-      values.push(value);
-      conditions.push(`${key} = $${values.length}`);
-    }
-  });
-  const clause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
-  return { clause, values };
-};
-
-// src/library/repositories/categories.ts
-var findAllCategories = (..._0) => __async(null, [..._0], function* (filter = {}) {
-  let result;
-  const client = yield postgressql_default;
-  const { clause, values } = buildWhereClause(filter);
-  const query = `SELECT * FROM TB_CATEGORIA ${clause} ORDER BY ID_CATEGORIA DESC`;
-  result = yield client.query(query, values);
-  return result.rows;
-});
-var insertCategory = (category) => __async(null, null, function* () {
-  var _a;
-  const client = yield postgressql_default;
-  try {
-    yield client.query("BEGIN");
-    const { nom_categoria } = category;
-    const insertQuery = `
-            INSERT INTO TB_CATEGORIA (nom_categoria)
-            VALUES ($1)
-            RETURNING id_categoria;
-        `;
-    const values = [nom_categoria];
-    const result = yield client.query(insertQuery, values);
-    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_categoria;
-    yield client.query("COMMIT");
-    return {
-      success: true,
-      message: "Categoria inserida com sucesso",
-      id
-    };
-  } catch (err) {
-    yield client.query("ROLLBACK");
-    return {
-      success: false,
-      message: "Erro ao inserir categoria",
-      error: err.message
-    };
-  }
-});
-var updateCategory = (category) => __async(null, null, function* () {
-  const client = yield postgressql_default;
-  try {
-    yield client.query("BEGIN");
-    const { nom_categoria, id_categoria } = category;
-    const updateQuery = `
-            UPDATE TB_CATEGORIA SET NOM_CATEGORIA = $1
-                WHERE ID_CATEGORIA = $2
-        `;
-    const values = [nom_categoria, id_categoria];
-    yield client.query(updateQuery, values);
-    yield client.query("COMMIT");
-    return {
-      success: true,
-      message: "Categoria atualizada com sucesso",
-      id: id_categoria
-    };
-  } catch (err) {
-    yield client.query("ROLLBACK");
-    return {
-      success: false,
-      message: "Erro ao atualizar categoria",
-      error: err.message
-    };
-  }
-});
+module.exports = __toCommonJS(skills_exports);
 
 // src/library/utils/http-response.ts
 var ok = (data) => __async(null, null, function* () {
@@ -190,60 +92,6 @@ var forbidden = () => __async(null, null, function* () {
   };
 });
 
-// src/api/services/categories.ts
-var getCategoryService = (filter) => __async(null, null, function* () {
-  const data = yield findAllCategories(filter);
-  let response;
-  if (data.length > 0) {
-    response = yield ok(data);
-  } else {
-    response = yield noContent();
-  }
-  return response;
-});
-var postCategoryService = (category) => __async(null, null, function* () {
-  const data = yield findAllCategories({ "nom_categoria": category.nom_categoria });
-  let response;
-  if (data.length > 0) {
-    response = yield badRequest("Categoria com o nome informado j\xE1 foi cadastrada!");
-  } else {
-    const result = yield insertCategory(category);
-    if (result.success) {
-      response = yield created(result.id);
-    } else
-      response = yield badRequest(result.message);
-  }
-  return response;
-});
-var patchCategoryByIdService = (category) => __async(null, null, function* () {
-  const data = yield findAllCategories({ "nom_categoria": category.nom_categoria });
-  let response;
-  if (data.length > 0 && data[0].id_categoria != category.id_categoria) {
-    response = yield badRequest("Categoria com o nome informado j\xE1 foi cadastrada!");
-  } else {
-    const result = yield updateCategory(category);
-    if (result.success) {
-      response = yield ok(result.message);
-    } else
-      response = yield badRequest(result.message);
-  }
-  return response;
-});
-
-// src/api/controllers/categories.ts
-var getCategories = (req, res) => __async(null, null, function* () {
-  const response = yield getCategoryService(req.query);
-  res.status(response.statusCode).json(response.body);
-});
-var postCategory = (req, res) => __async(null, null, function* () {
-  const response = yield postCategoryService(req.body);
-  res.status(response.statusCode).json(response.body);
-});
-var patchCategoryById = (req, res) => __async(null, null, function* () {
-  const response = yield patchCategoryByIdService(req.body);
-  res.status(response.statusCode).json(response.body);
-});
-
 // src/library/utils/validation.ts
 var validate = (schema, location) => {
   return (req, res, next) => __async(null, null, function* () {
@@ -259,18 +107,170 @@ var validate = (schema, location) => {
   });
 };
 
-// src/library/schemas/categories.ts
+// src/library/database/postgressql.ts
+var import_pg = require("pg");
+var user = process.env.POSTGRES_USER;
+var host = process.env.POSTGRES_HOST;
+var database = process.env.POSTGRES_DATABASE;
+var password = process.env.POSTGRES_PASSWORD;
+var pool = new import_pg.Pool({
+  connectionString: `postgres://${user}:${password}@${host}/${database}?sslmode=require`,
+  idleTimeoutMillis: 3e3
+});
+var poolPromise = pool.connect().then((pool2) => {
+  console.log("Connected to Postgtresql");
+  return pool2;
+}).catch((err) => {
+  console.error("Connection failed! Bad config:", err);
+  throw err;
+});
+var postgressql_default = poolPromise;
+
+// src/library/utils/queryBuilder.ts
+var buildWhereClause = (filters) => {
+  const conditions = [];
+  const values = [];
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== void 0 && value !== null) {
+      values.push(value);
+      conditions.push(`${key} = $${values.length}`);
+    }
+  });
+  const clause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  return { clause, values };
+};
+
+// src/library/repositories/skills.ts
+var findAllSkills = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_HABILIDADE ${clause} ORDER BY ID_HABILIDADE DESC`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+var insertSkill = (skill) => __async(null, null, function* () {
+  var _a;
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_habilidade } = skill;
+    const insertQuery = `
+            INSERT INTO TB_HABILIDADE (nom_habilidade)
+            VALUES ($1)
+            RETURNING id_habilidade;
+        `;
+    const values = [nom_habilidade];
+    const result = yield client.query(insertQuery, values);
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_habilidade;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Habilidade inserida com sucesso",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao inserir habilidade",
+      error: err.message
+    };
+  }
+});
+var updateSkill = (skill) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_habilidade, id_habilidade } = skill;
+    const updateQuery = `
+            UPDATE TB_HABILIDADE SET NOM_HABILIDADE = $1
+                WHERE ID_HABILIDADE = $2
+        `;
+    const values = [nom_habilidade, id_habilidade];
+    yield client.query(updateQuery, values);
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Habilidade atualizada com sucesso",
+      id: id_habilidade
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao atualizar habilidade",
+      error: err.message
+    };
+  }
+});
+
+// src/api/services/skills.ts
+var getSkillService = (filter) => __async(null, null, function* () {
+  const data = yield findAllSkills(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var postSkillService = (skill) => __async(null, null, function* () {
+  const data = yield findAllSkills({ "nom_habilidade": skill.nom_habilidade });
+  let response;
+  if (data.length > 0) {
+    response = yield badRequest("Habilidade com o nome informado j\xE1 foi cadastrada!");
+  } else {
+    const result = yield insertSkill(skill);
+    if (result.success) {
+      response = yield created(result.id);
+    } else
+      response = yield badRequest(result.message);
+  }
+  return response;
+});
+var patchSkillByIdService = (skill) => __async(null, null, function* () {
+  const data = yield findAllSkills({ "nom_habilidade": skill.nom_habilidade });
+  let response;
+  if (data.length > 0 && data[0].id_habilidade != skill.id_habilidade) {
+    response = yield badRequest("Habilidade com o nome informado j\xE1 foi cadastrada!");
+  } else {
+    const result = yield updateSkill(skill);
+    if (result.success) {
+      response = yield ok(result.message);
+    } else
+      response = yield badRequest(result.message);
+  }
+  return response;
+});
+
+// src/api/controllers/skills.ts
+var getSkills = (req, res) => __async(null, null, function* () {
+  const response = yield getSkillService(req.query);
+  res.status(response.statusCode).json(response.body);
+});
+var postSkill = (req, res) => __async(null, null, function* () {
+  const response = yield postSkillService(req.body);
+  res.status(response.statusCode).json(response.body);
+});
+var patchSkillById = (req, res) => __async(null, null, function* () {
+  const response = yield patchSkillByIdService(req.body);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/library/schemas/skills.ts
 var import_zod = require("zod");
-var getCategorySchema = import_zod.z.object({
-  id_categoria: import_zod.z.coerce.number().int().optional(),
-  nom_categoria: import_zod.z.string().optional()
+var getSkillSchema = import_zod.z.object({
+  id_habilidade: import_zod.z.coerce.number().int().optional(),
+  nom_habilidade: import_zod.z.string().optional()
 }).strict();
-var postCategorySchema = import_zod.z.object({
-  nom_categoria: import_zod.z.string().min(1, "\xC9 obrigat\xF3rio")
+var postSkillSchema = import_zod.z.object({
+  nom_habilidade: import_zod.z.string().min(1, "\xC9 obrigat\xF3rio")
 }).strict();
-var patchCategorySchema = import_zod.z.object({
-  id_categoria: import_zod.z.number().int(),
-  nom_categoria: import_zod.z.string().min(1, "\xC9 obrigat\xF3rio")
+var patchSkillSchema = import_zod.z.object({
+  id_habilidade: import_zod.z.number().int(),
+  nom_habilidade: import_zod.z.string().min(1, "\xC9 obrigat\xF3rio")
 }).strict();
 
 // src/library/utils/authentication.ts
@@ -304,9 +304,9 @@ function authenticateToken(role) {
   });
 }
 
-// src/api/routes/categories.ts
-function categories_default(router) {
-  router.get("/category", validate(getCategorySchema, "query"), authenticateToken("default"), getCategories);
-  router.post("/category", validate(postCategorySchema, "body"), authenticateToken("admin"), postCategory);
-  router.patch("/category", validate(patchCategorySchema, "body"), authenticateToken("admin"), patchCategoryById);
+// src/api/routes/skills.ts
+function skills_default(router) {
+  router.get("/skill", validate(getSkillSchema, "query"), authenticateToken("default"), getSkills);
+  router.post("/skill", validate(postSkillSchema, "body"), authenticateToken("admin"), postSkill);
+  router.patch("/skill", validate(patchSkillSchema, "body"), authenticateToken("admin"), patchSkillById);
 }

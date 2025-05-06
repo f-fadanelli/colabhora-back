@@ -37,59 +37,36 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
+// src/library/utils/validation.ts
+var validation_exports = {};
+__export(validation_exports, {
+  validate: () => validate
+});
+module.exports = __toCommonJS(validation_exports);
+
 // src/library/utils/http-response.ts
-var http_response_exports = {};
-__export(http_response_exports, {
-  badRequest: () => badRequest,
-  created: () => created,
-  forbidden: () => forbidden,
-  noContent: () => noContent,
-  ok: () => ok,
-  unauthorized: () => unauthorized
-});
-module.exports = __toCommonJS(http_response_exports);
-var ok = (data) => __async(null, null, function* () {
-  return {
-    statusCode: 200,
-    body: { result: data }
-  };
-});
-var created = (id) => __async(null, null, function* () {
-  return {
-    statusCode: 201,
-    body: { message: "Sucess!", generated_id: id }
-  };
-});
-var noContent = () => __async(null, null, function* () {
-  return {
-    statusCode: 204,
-    body: null
-  };
-});
 var badRequest = (message) => __async(null, null, function* () {
   return {
     statusCode: 400,
     body: { error: message }
   };
 });
-var unauthorized = () => __async(null, null, function* () {
-  return {
-    statusCode: 401,
-    body: { error: "Authentication token is missing!" }
-  };
-});
-var forbidden = () => __async(null, null, function* () {
-  return {
-    statusCode: 403,
-    body: { error: "Not authorized!" }
-  };
-});
+
+// src/library/utils/validation.ts
+var validate = (schema, location) => {
+  return (req, res, next) => __async(null, null, function* () {
+    const dataToValidate = req[location];
+    const result = schema.safeParse(dataToValidate);
+    if (!result.success) {
+      const response = yield badRequest(result.error.flatten());
+      res.status(response.statusCode).json(response.body);
+      return;
+    }
+    req[location] = result.data;
+    next();
+  });
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  badRequest,
-  created,
-  forbidden,
-  noContent,
-  ok,
-  unauthorized
+  validate
 });

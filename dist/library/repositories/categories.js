@@ -40,7 +40,9 @@ var __async = (__this, __arguments, generator) => {
 // src/library/repositories/categories.ts
 var categories_exports = {};
 __export(categories_exports, {
-  findAllCategories: () => findAllCategories
+  findAllCategories: () => findAllCategories,
+  insertCategory: () => insertCategory,
+  updateCategory: () => updateCategory
 });
 module.exports = __toCommonJS(categories_exports);
 
@@ -63,14 +65,87 @@ var poolPromise = pool.connect().then((pool2) => {
 });
 var postgressql_default = poolPromise;
 
+// src/library/utils/queryBuilder.ts
+var buildWhereClause = (filters) => {
+  const conditions = [];
+  const values = [];
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== void 0 && value !== null) {
+      values.push(value);
+      conditions.push(`${key} = $${values.length}`);
+    }
+  });
+  const clause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  return { clause, values };
+};
+
 // src/library/repositories/categories.ts
-var findAllCategories = () => __async(null, null, function* () {
+var findAllCategories = (..._0) => __async(null, [..._0], function* (filter = {}) {
   let result;
   const client = yield postgressql_default;
-  result = yield client.query(`SELECT * FROM TB_CATEGORIA`);
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_CATEGORIA ${clause} ORDER BY ID_CATEGORIA DESC`;
+  result = yield client.query(query, values);
   return result.rows;
+});
+var insertCategory = (category) => __async(null, null, function* () {
+  var _a;
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_categoria } = category;
+    const insertQuery = `
+            INSERT INTO TB_CATEGORIA (nom_categoria)
+            VALUES ($1)
+            RETURNING id_categoria;
+        `;
+    const values = [nom_categoria];
+    const result = yield client.query(insertQuery, values);
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_categoria;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Categoria inserida com sucesso",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao inserir categoria",
+      error: err.message
+    };
+  }
+});
+var updateCategory = (category) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_categoria, id_categoria } = category;
+    const updateQuery = `
+            UPDATE TB_CATEGORIA SET NOM_CATEGORIA = $1
+                WHERE ID_CATEGORIA = $2
+        `;
+    const values = [nom_categoria, id_categoria];
+    yield client.query(updateQuery, values);
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Categoria atualizada com sucesso",
+      id: id_categoria
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao atualizar categoria",
+      error: err.message
+    };
+  }
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  findAllCategories
+  findAllCategories,
+  insertCategory,
+  updateCategory
 });

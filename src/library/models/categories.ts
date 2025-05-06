@@ -1,7 +1,7 @@
 
 interface CategoryModel{
-    ID_CATEGORIA: number
-    NOM_CATEGORIA: string
+    id_categoria: number
+    nom_categoria: string
 }
 
 export default CategoryModel

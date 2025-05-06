@@ -1,48 +1,48 @@
 import poolPromise from "../database/postgressql"
-import CategoryModel from "../models/categories"
+import SkillModel from "../models/skills"
 import { TransactionResult } from "../models/transaction-response"
-import { CategoryInput, CategorySearch, CategoryUpdate } from "../schemas/categories"
+import { SkillInput, SkillSearch, SkillUpdate } from "../schemas/skills"
 import { buildWhereClause } from "../utils/queryBuilder"
 
-export const findAllCategories = async (filter: CategorySearch = {}): Promise<CategoryModel[]> => {
+export const findAllSkills = async (filter: SkillSearch = {}): Promise<SkillModel[]> => {
     let result
 
     const client = await poolPromise 
 
     const { clause, values } = buildWhereClause(filter);
     
-    const query = `SELECT * FROM TB_CATEGORIA ${clause} ORDER BY ID_CATEGORIA DESC`;
+    const query = `SELECT * FROM TB_HABILIDADE ${clause} ORDER BY ID_HABILIDADE DESC`;
     
     result = await client.query(query, values);
 
     return result.rows;
 }
 
-export const insertCategory = async(category: CategoryInput): Promise<TransactionResult> =>{
+export const insertSkill = async(skill: SkillInput): Promise<TransactionResult> =>{
     const client = await poolPromise 
 
     try {
         await client.query('BEGIN')
         
-        const {nom_categoria} = category
+        const {nom_habilidade} = skill
 
         const insertQuery = `
-            INSERT INTO TB_CATEGORIA (nom_categoria)
+            INSERT INTO TB_HABILIDADE (nom_habilidade)
             VALUES ($1)
-            RETURNING id_categoria;
+            RETURNING id_habilidade;
         `;
 
-        const values = [nom_categoria]
+        const values = [nom_habilidade]
 
         const result = await client.query(insertQuery, values)
 
-        const id = result.rows[0]?.id_categoria
+        const id = result.rows[0]?.id_habilidade
     
         await client.query('COMMIT')
     
         return {
           success: true,
-          message: 'Categoria inserida com sucesso',
+          message: 'Habilidade inserida com sucesso',
           id
         }
 
@@ -50,26 +50,26 @@ export const insertCategory = async(category: CategoryInput): Promise<Transactio
         await client.query('ROLLBACK');
         return {
           success: false,
-          message: 'Erro ao inserir categoria',
+          message: 'Erro ao inserir habilidade',
           error: err.message,
         }
       }
 }
 
-export const updateCategory = async(category: CategoryUpdate): Promise<TransactionResult> =>{
+export const updateSkill = async(skill: SkillUpdate): Promise<TransactionResult> =>{
     const client = await poolPromise 
 
     try {
         await client.query('BEGIN')
         
-        const {nom_categoria, id_categoria} = category
+        const {nom_habilidade, id_habilidade} = skill
 
         const updateQuery = `
-            UPDATE TB_CATEGORIA SET NOM_CATEGORIA = $1
-                WHERE ID_CATEGORIA = $2
+            UPDATE TB_HABILIDADE SET NOM_HABILIDADE = $1
+                WHERE ID_HABILIDADE = $2
         `;
 
-        const values = [nom_categoria, id_categoria]
+        const values = [nom_habilidade, id_habilidade]
 
         await client.query(updateQuery, values)
     
@@ -77,15 +77,15 @@ export const updateCategory = async(category: CategoryUpdate): Promise<Transacti
     
         return {
           success: true,
-          message: 'Categoria atualizada com sucesso',
-          id: id_categoria
+          message: 'Habilidade atualizada com sucesso',
+          id: id_habilidade
         }
 
       } catch (err: any) {
         await client.query('ROLLBACK');
         return {
           success: false,
-          message: 'Erro ao atualizar categoria',
+          message: 'Erro ao atualizar habilidade',
           error: err.message,
         }
       }

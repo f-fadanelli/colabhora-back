@@ -2,7 +2,21 @@
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __objRest = (source, exclude) => {
+  var target = {};
+  for (var prop in source)
+    if (__hasOwnProp.call(source, prop) && exclude.indexOf(prop) < 0)
+      target[prop] = source[prop];
+  if (source != null && __getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(source)) {
+      if (exclude.indexOf(prop) < 0 && __propIsEnum.call(source, prop))
+        target[prop] = source[prop];
+    }
+  return target;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -40,7 +54,10 @@ var __async = (__this, __arguments, generator) => {
 // src/library/repositories/users.ts
 var users_exports = {};
 __export(users_exports, {
-  findAllUsers: () => findAllUsers
+  findAllUsers: () => findAllUsers,
+  findUserSkills: () => findUserSkills,
+  insertUser: () => insertUser,
+  updateUser: () => updateUser
 });
 module.exports = __toCommonJS(users_exports);
 
@@ -63,14 +80,124 @@ var poolPromise = pool.connect().then((pool2) => {
 });
 var postgressql_default = poolPromise;
 
+// src/library/utils/queryBuilder.ts
+var buildWhereClause = (filters) => {
+  const conditions = [];
+  const values = [];
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== void 0 && value !== null) {
+      values.push(value);
+      conditions.push(`${key} = $${values.length}`);
+    }
+  });
+  const clause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  return { clause, values };
+};
+
 // src/library/repositories/users.ts
-var findAllUsers = () => __async(null, null, function* () {
+var findAllUsers = (..._0) => __async(null, [..._0], function* (filter = {}) {
   let result;
   const client = yield postgressql_default;
-  result = yield client.query(`SELECT * FROM TB_USUARIO`);
+  let _a = filter, { id_habilidade } = _a, newFilter = __objRest(_a, ["id_habilidade"]);
+  let { clause, values } = buildWhereClause(newFilter);
+  if (id_habilidade) {
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} ID_USUARIO IN (SELECT DISTINCT(ID_USUARIO) FROM TB_USUARIO_HABILIDADE WHERE ID_HABILIDADE = $${values.length + 1} ) `;
+    values.push(id_habilidade);
+  }
+  const query = `SELECT * FROM VW_USUARIO ${clause} ORDER BY ID_USUARIO DESC`;
+  result = yield client.query(query, values);
   return result.rows;
+});
+var findUserSkills = (filter) => __async(null, null, function* () {
+  let result;
+  const client = yield postgressql_default;
+  let { id_usuario } = filter;
+  const values = [id_usuario];
+  result = yield client.query(`SELECT * FROM VW_USUARIO_HABILIDADE  
+                                WHERE ID_USUARIO = $1`, values);
+  return result.rows;
+});
+var insertUser = (user2) => __async(null, null, function* () {
+  var _a;
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_usuario, cod_cadastro, cod_email_usuario, cod_senha_usuario, id_cidade, desc_endereco, flg_tipo_usuario, desc_area_atuacao, id_habilidade_lista } = user2;
+    const insertQuery = `
+            INSERT INTO TB_USUARIO (nom_usuario, cod_cadastro, cod_email_usuario, cod_senha_usuario, num_saldo_horas, id_cidade, desc_endereco, flg_tipo_usuario, desc_area_atuacao)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id_usuario;
+        `;
+    const initialBalance = 10;
+    const values = [nom_usuario, cod_cadastro, cod_email_usuario, cod_senha_usuario, initialBalance, id_cidade, desc_endereco, flg_tipo_usuario, desc_area_atuacao];
+    const result = yield client.query(insertQuery, values);
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_usuario;
+    for (const id_habilidade of id_habilidade_lista) {
+      yield client.query(`INSERT INTO TB_USUARIO_HABILIDADE(id_usuario, id_habilidade) VALUES($1, $2)`, [id, id_habilidade]);
+    }
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Usu\xE1rio inserido com sucesso",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao inserir usu\xE1rio",
+      error: err.message
+    };
+  }
+});
+var updateUser = (user2) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_usuario, nom_usuario, cod_cadastro, cod_email_usuario, id_cidade, desc_endereco, desc_area_atuacao, id_habilidade_lista } = user2;
+    const skills = yield findUserSkills({ id_usuario });
+    let current_skills_list = [];
+    for (const skill of skills) {
+      current_skills_list.push(skill["id_habilidade"]);
+    }
+    let new_skills = id_habilidade_lista.filter((skl) => !current_skills_list.includes(skl));
+    let deleted_skills = current_skills_list.filter((skl) => !id_habilidade_lista.includes(skl));
+    for (const id_habilidade of new_skills) {
+      yield client.query(`INSERT INTO TB_USUARIO_HABILIDADE(id_usuario, id_habilidade) VALUES($1, $2)`, [id_usuario, id_habilidade]);
+    }
+    for (const id_habilidade of deleted_skills) {
+      yield client.query(`DELETE FROM TB_USUARIO_HABILIDADE WHERE id_usuario = $1 AND id_habilidade = $2`, [id_usuario, id_habilidade]);
+    }
+    const updateQuery = `
+            UPDATE TB_USUARIO SET NOM_USUARIO = $1,
+                                COD_CADASTRO = $2,
+                                COD_EMAIL_USUARIO = $3,
+                                ID_CIDADE = $4,
+                                DESC_ENDERECO = $5,
+                                DESC_AREA_ATUACAO = $6
+                WHERE ID_USUARIO = $7
+        `;
+    const values = [nom_usuario, cod_cadastro, cod_email_usuario, id_cidade, desc_endereco, desc_area_atuacao, id_usuario];
+    yield client.query(updateQuery, values);
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Usu\xE1rio atualizado com sucesso",
+      id: id_usuario
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao atualizar usu\xE1rio",
+      error: err.message
+    };
+  }
 });
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  findAllUsers
+  findAllUsers,
+  findUserSkills,
+  insertUser,
+  updateUser
 });
