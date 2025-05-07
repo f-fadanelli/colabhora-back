@@ -1,9 +1,9 @@
 
 import { Router } from "express"
 import { getCategories, patchCategoryById, postCategory } from "../controllers/categories"
-import { validate } from "../../library/utils/validation"
+import { validate } from "../../library/middlewares/validation"
 import { getCategorySchema, patchCategorySchema, postCategorySchema } from "../../library/schemas/categories"
-import { authenticateToken } from "../../library/utils/authentication"
+import { authenticateToken } from "../../library/middlewares/authentication"
 
 export default function (router: Router) {
     

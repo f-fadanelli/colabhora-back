@@ -2,7 +2,7 @@ import { Request, Response } from "express"
 import { getUserService, getUserSkillsService, patchUserByIdService, postUserService, validateUserLoginService } from "../services/users"
 import HttpResponseModel from "../../library/models/http-response"
 import { validateUserSchema } from "../../library/schemas/users"
-import { validate } from "../../library/utils/validation"
+import { validate } from "../../library/middlewares/validation"
 
 export const getUsers = async (req: Request, res: Response)=>{
     

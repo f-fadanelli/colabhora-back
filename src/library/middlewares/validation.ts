@@ -1,6 +1,6 @@
 import { ZodSchema } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import { badRequest } from './http-response';
+import { badRequest } from '../utils/http-response';
 
 type RequestDataLocation = 'body' | 'query' | 'params';
 

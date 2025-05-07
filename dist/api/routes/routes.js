@@ -384,7 +384,7 @@ var patchUserSchema = import_zod.z.object({
   id_habilidade_lista: import_zod.z.array(import_zod.z.number().int())
 }).strict();
 
-// src/library/utils/validation.ts
+// src/library/middlewares/validation.ts
 var validate = (schema, location) => {
   return (req, res, next) => __async(null, null, function* () {
     const dataToValidate = req[location];
@@ -402,7 +402,7 @@ var validate = (schema, location) => {
   });
 };
 
-// src/library/utils/authentication.ts
+// src/library/middlewares/authentication.ts
 var import_jsonwebtoken2 = __toESM(require("jsonwebtoken"));
 var JWT_SECRET2 = process.env.JWT_SECRET || "meu_secret";
 function authenticateToken(role) {

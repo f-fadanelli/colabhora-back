@@ -247,7 +247,7 @@ var patchCategoryById = (req, res) => __async(null, null, function* () {
   res.status(response.statusCode).json(response.body);
 });
 
-// src/library/utils/validation.ts
+// src/library/middlewares/validation.ts
 var validate = (schema, location) => {
   return (req, res, next) => __async(null, null, function* () {
     const dataToValidate = req[location];
@@ -279,7 +279,7 @@ var patchCategorySchema = import_zod.z.object({
   nom_categoria: import_zod.z.string().min(1, "\xC9 obrigat\xF3rio")
 }).strict();
 
-// src/library/utils/authentication.ts
+// src/library/middlewares/authentication.ts
 var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
 var JWT_SECRET = process.env.JWT_SECRET || "meu_secret";
 function authenticateToken(role) {

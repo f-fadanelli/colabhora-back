@@ -1,9 +1,9 @@
 
 import { Router } from "express"
-import { validate } from "../../library/utils/validation"
+import { validate } from "../../library/middlewares/validation"
 import { getSkills, patchSkillById, postSkill } from "../controllers/skills"
 import { getSkillSchema, patchSkillSchema, postSkillSchema } from "../../library/schemas/skills"
-import { authenticateToken } from "../../library/utils/authentication"
+import { authenticateToken } from "../../library/middlewares/authentication"
 
 export default function (router: Router) {
     

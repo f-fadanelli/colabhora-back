@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { Request, Response, NextFunction, RequestHandler } from 'express'
-import { forbidden, unauthorized } from './http-response'
+import { forbidden, unauthorized } from '../utils/http-response'
 import { DecodedToken } from '../types/decoded-token'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'meu_secret'
