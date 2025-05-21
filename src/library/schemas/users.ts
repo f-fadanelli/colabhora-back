@@ -10,7 +10,7 @@ export const getUserSchema = z.object({
   }).strict()
 
 export const getSkillsByUserSchema = z.object({
-    id_usuario: z.coerce.number().int()
+    id_usuario: z.coerce.number().int(),
   }).strict()
 
 export const validateUserSchema = z.object({
