@@ -1,0 +1,211 @@
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __async = (__this, __arguments, generator) => {
+  return new Promise((resolve, reject) => {
+    var fulfilled = (value) => {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var rejected = (value) => {
+      try {
+        step(generator.throw(value));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+    step((generator = generator.apply(__this, __arguments)).next());
+  });
+};
+
+// src/api/routes/cities.ts
+var cities_exports = {};
+__export(cities_exports, {
+  default: () => cities_default
+});
+module.exports = __toCommonJS(cities_exports);
+
+// src/library/utils/http-response.ts
+var ok = (data) => __async(null, null, function* () {
+  return {
+    statusCode: 200,
+    body: { result: data }
+  };
+});
+var noContent = () => __async(null, null, function* () {
+  return {
+    statusCode: 204,
+    body: null
+  };
+});
+var badRequest = (message) => __async(null, null, function* () {
+  return {
+    statusCode: 400,
+    body: { error: message }
+  };
+});
+var unauthorized = () => __async(null, null, function* () {
+  return {
+    statusCode: 401,
+    body: { error: "Authentication token is missing!" }
+  };
+});
+var forbidden = () => __async(null, null, function* () {
+  return {
+    statusCode: 403,
+    body: { error: "Not authorized!" }
+  };
+});
+
+// src/library/middlewares/validation.ts
+var validate = (schema, location) => {
+  return (req, res, next) => __async(null, null, function* () {
+    const dataToValidate = req[location];
+    const result = schema.safeParse(dataToValidate);
+    if (!result.success) {
+      const response = yield badRequest(result.error.flatten());
+      res.status(response.statusCode).json(response.body);
+      return;
+    }
+    if (!req.validated) {
+      req.validated = {};
+    }
+    req.validated[location] = result.data;
+    next();
+  });
+};
+
+// src/library/middlewares/authentication.ts
+var import_jsonwebtoken = __toESM(require("jsonwebtoken"));
+var JWT_SECRET = process.env.JWT_SECRET || "meu_secret";
+function authenticateToken(role) {
+  return (req, res, next) => __async(null, null, function* () {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    let response;
+    if (!token) {
+      response = yield unauthorized();
+      res.status(response.statusCode).json(response.body);
+      return;
+    }
+    import_jsonwebtoken.default.verify(token, JWT_SECRET, (err, decoded) => __async(null, null, function* () {
+      if (err) {
+        response = yield forbidden();
+        res.status(response.statusCode).json(response.body);
+        return;
+      }
+      const user2 = decoded;
+      if (role === "admin" && (user2 == null ? void 0 : user2.flg_tipo_usuario) !== "AD") {
+        response = yield forbidden();
+        res.status(response.statusCode).json(response.body);
+        return;
+      }
+      req.user = user2;
+      next();
+    }));
+  });
+}
+
+// src/library/schemas/cities.ts
+var import_zod = require("zod");
+var getCitySchema = import_zod.z.object({
+  id_cidade: import_zod.z.coerce.number().int().optional(),
+  nom_cidade: import_zod.z.string().optional(),
+  id_estado: import_zod.z.coerce.number().int().optional()
+}).strict();
+
+// src/library/database/postgressql.ts
+var import_pg = require("pg");
+var user = process.env.POSTGRES_USER;
+var host = process.env.POSTGRES_HOST;
+var database = process.env.POSTGRES_DATABASE;
+var password = process.env.POSTGRES_PASSWORD;
+var pool = new import_pg.Pool({
+  connectionString: `postgres://${user}:${password}@${host}/${database}?sslmode=require`,
+  idleTimeoutMillis: 3e3
+});
+var poolPromise = pool.connect().then((pool2) => {
+  console.log("Connected to Postgtresql");
+  return pool2;
+}).catch((err) => {
+  console.error("Connection failed! Bad config:", err);
+  throw err;
+});
+var postgressql_default = poolPromise;
+
+// src/library/utils/queryBuilder.ts
+var buildWhereClause = (filters) => {
+  const conditions = [];
+  const values = [];
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== void 0 && value !== null) {
+      values.push(value);
+      conditions.push(`${key} = $${values.length}`);
+    }
+  });
+  const clause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+  return { clause, values };
+};
+
+// src/library/repositories/cities.ts
+var findAllCities = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_CIDADE ${clause} ORDER BY NOM_CIDADE`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+
+// src/api/services/cities.ts
+var getCityService = (filter) => __async(null, null, function* () {
+  const data = yield findAllCities(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+
+// src/api/controllers/cities.ts
+var getCities = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getCityService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/cities.ts
+function cities_default(router) {
+  router.get("/city", validate(getCitySchema, "query"), authenticateToken("default"), getCities);
+}

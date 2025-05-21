@@ -718,11 +718,506 @@ function skills_default(router2) {
   router2.patch("/skill", validate(patchSkillSchema, "body"), authenticateToken("admin"), patchSkillById);
 }
 
+// src/library/schemas/cities.ts
+var import_zod4 = require("zod");
+var getCitySchema = import_zod4.z.object({
+  id_cidade: import_zod4.z.coerce.number().int().optional(),
+  nom_cidade: import_zod4.z.string().optional(),
+  id_estado: import_zod4.z.coerce.number().int().optional()
+}).strict();
+
+// src/library/repositories/cities.ts
+var findAllCities = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_CIDADE ${clause} ORDER BY NOM_CIDADE`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+
+// src/api/services/cities.ts
+var getCityService = (filter) => __async(null, null, function* () {
+  const data = yield findAllCities(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+
+// src/api/controllers/cities.ts
+var getCities = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getCityService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/cities.ts
+function cities_default(router2) {
+  router2.get("/city", validate(getCitySchema, "query"), authenticateToken("default"), getCities);
+}
+
+// src/library/schemas/states.ts
+var import_zod5 = require("zod");
+var getStateSchema = import_zod5.z.object({
+  id_estado: import_zod5.z.coerce.number().int().optional(),
+  nom_estado: import_zod5.z.string().optional(),
+  cod_uf_estado: import_zod5.z.string().optional()
+}).strict();
+
+// src/library/repositories/states.ts
+var findAllStates = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_ESTADO ${clause} ORDER BY NOM_ESTADO`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+
+// src/api/services/states.ts
+var getStateService = (filter) => __async(null, null, function* () {
+  const data = yield findAllStates(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+
+// src/api/controllers/states.ts
+var getStates = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getStateService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/states.ts
+function states_default(router2) {
+  router2.get("/state", validate(getStateSchema, "query"), authenticateToken("default"), getStates);
+}
+
+// src/library/schemas/status.ts
+var import_zod6 = require("zod");
+var getStatusSchema = import_zod6.z.object({
+  id_status: import_zod6.z.coerce.number().int().optional(),
+  nom_status: import_zod6.z.string().optional()
+}).strict();
+
+// src/library/repositories/status.ts
+var findAllStatus = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  const { clause, values } = buildWhereClause(filter);
+  const query = `SELECT * FROM TB_STATUS ${clause} ORDER BY ID_STATUS`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+
+// src/api/services/status.ts
+var getStatusService = (filter) => __async(null, null, function* () {
+  const data = yield findAllStatus(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+
+// src/api/controllers/status.ts
+var getStatus = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getStatusService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/status.ts
+function status_default(router2) {
+  router2.get("/status", validate(getStatusSchema, "query"), authenticateToken("default"), getStatus);
+}
+
+// src/library/schemas/services.ts
+var import_zod7 = require("zod");
+var getServiceSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.coerce.number().int().optional(),
+  id_usuario_solicitante: import_zod7.z.coerce.number().int().optional(),
+  id_usuario_prestador: import_zod7.z.coerce.number().int().optional(),
+  id_usuario_busca: import_zod7.z.coerce.number().int().optional(),
+  id_projeto_pai: import_zod7.z.coerce.number().int().optional(),
+  id_cidade: import_zod7.z.coerce.number().int().optional(),
+  id_status: import_zod7.z.coerce.number().int().optional(),
+  dth_servico_low: import_zod7.z.coerce.date().optional(),
+  dth_servico_high: import_zod7.z.coerce.date().optional(),
+  dth_fim_servico_low: import_zod7.z.coerce.date().optional(),
+  dth_fim_servico_high: import_zod7.z.coerce.date().optional(),
+  id_habilidade: import_zod7.z.coerce.number().int().optional(),
+  id_categoria: import_zod7.z.coerce.number().int().optional()
+}).strict();
+var getConflictServiceSchema = import_zod7.z.object({
+  id_usuario: import_zod7.z.coerce.number().int(),
+  dth_servico: import_zod7.z.coerce.date(),
+  dth_fim_servico: import_zod7.z.coerce.date()
+}).strict();
+var getSkillsByServiceSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.coerce.number().int()
+}).strict();
+var getCategoriesByServiceSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.coerce.number().int()
+}).strict();
+var getProviderUsersByServiceSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.coerce.number().int()
+}).strict();
+var postServiceSchema = import_zod7.z.object({
+  nom_servico: import_zod7.z.string(),
+  desc_servico: import_zod7.z.string(),
+  id_usuario_solicitante: import_zod7.z.number().int(),
+  id_projeto_pai: import_zod7.z.number().int().optional(),
+  dth_servico: import_zod7.z.coerce.date(),
+  dth_fim_servico: import_zod7.z.coerce.date(),
+  num_tempo_estimado: import_zod7.z.number().int().optional(),
+  num_novo_saldo: import_zod7.z.number().int().optional(),
+  num_qtd_prestadores: import_zod7.z.number().int(),
+  id_habilidade_lista: import_zod7.z.array(import_zod7.z.number().int()),
+  id_categoria_lista: import_zod7.z.array(import_zod7.z.number().int())
+}).strict();
+var patchProvideServiceSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.number().int(),
+  id_usuario_prestador: import_zod7.z.number().int(),
+  id_novo_status: import_zod7.z.number().int().optional()
+}).strict();
+
+// src/library/enums/status.ts
+var StatusEnum = Object.freeze({
+  PENDING: 5,
+  PARCIAL_ACCEPTED: 6,
+  TOTAL_ACCEPTED: 7,
+  DONE: 8,
+  CANCELED: 9
+});
+var status_default2 = StatusEnum;
+
+// src/library/repositories/services.ts
+var findAllServices = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  let _a = filter, { id_habilidade, id_categoria, id_usuario_prestador, id_usuario_busca, dth_servico_high, dth_servico_low, dth_fim_servico_low, dth_fim_servico_high } = _a, newFilter = __objRest(_a, ["id_habilidade", "id_categoria", "id_usuario_prestador", "id_usuario_busca", "dth_servico_high", "dth_servico_low", "dth_fim_servico_low", "dth_fim_servico_high"]);
+  let { clause, values } = buildWhereClause(newFilter);
+  if (dth_servico_low || dth_servico_high) {
+    const lowDate = dth_servico_low ? dth_servico_low : dth_servico_high ? dth_servico_high : (/* @__PURE__ */ new Date()).toISOString();
+    const highDate = dth_servico_high ? dth_servico_high : dth_servico_low ? dth_servico_low : (/* @__PURE__ */ new Date()).toISOString();
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} DTH_SERVICO BETWEEN $${values.length + 1} AND $${values.length + 2} `;
+    values.push(lowDate);
+    values.push(highDate);
+  }
+  if (dth_fim_servico_low || dth_fim_servico_high) {
+    const lowDate = dth_fim_servico_low ? dth_fim_servico_low : dth_fim_servico_high ? dth_fim_servico_high : (/* @__PURE__ */ new Date()).toISOString();
+    const highDate = dth_fim_servico_high ? dth_fim_servico_high : dth_fim_servico_low ? dth_fim_servico_low : (/* @__PURE__ */ new Date()).toISOString();
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} DTH_FIM_SERVICO BETWEEN $${values.length + 1} AND $${values.length + 2} `;
+    values.push(lowDate);
+    values.push(highDate);
+  }
+  if (id_habilidade) {
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} ID_SERVICO IN (SELECT DISTINCT(ID_SERVICO) FROM TB_SERVICO_HABILIDADE WHERE ID_HABILIDADE = $${values.length + 1} ) `;
+    values.push(id_habilidade);
+  }
+  if (id_categoria) {
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} ID_SERVICO IN (SELECT DISTINCT(ID_SERVICO) FROM TB_SERVICO_CATEGORIA WHERE ID_CATEGORIA = $${values.length + 1} ) `;
+    values.push(id_categoria);
+  }
+  if (id_usuario_prestador) {
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} ID_SERVICO IN (SELECT DISTINCT(ID_SERVICO) FROM TB_SERVICO_PRESTADOR WHERE ID_USUARIO_PRESTADOR = $${values.length + 1} ) `;
+    values.push(id_usuario_prestador);
+  }
+  if (id_usuario_busca) {
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} ID_USUARIO_SOLICITANTE != $${values.length + 1} AND ID_SERVICO NOT IN (SELECT DISTINCT(ID_SERVICO) FROM TB_SERVICO_PRESTADOR WHERE ID_USUARIO_PRESTADOR = $${values.length + 2} ) `;
+    values.push(id_usuario_busca);
+    values.push(id_usuario_busca);
+  }
+  const query = `SELECT * FROM VW_SERVICO ${clause} ORDER BY ID_SERVICO DESC`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+var findConflictServices = (filter) => __async(null, null, function* () {
+  let result;
+  const client = yield postgressql_default;
+  let { dth_servico, dth_fim_servico, id_usuario } = filter;
+  const query1 = `SELECT * FROM VW_SERVICO
+                    WHERE ID_USUARIO_SOLICITANTE = $1
+                    AND ID_STATUS != ${status_default2.CANCELED}
+                    AND $2 < DTH_FIM_SERVICO AND DTH_SERVICO < $3`;
+  const values1 = [id_usuario, dth_servico, dth_fim_servico];
+  const result1 = yield client.query(query1, values1);
+  const query2 = `SELECT * FROM VW_SERVICO_PRESTADOR
+                    WHERE ID_USUARIO_PRESTADOR = $1
+                    AND ID_STATUS != ${status_default2.CANCELED}
+                    AND $2 < DTH_FIM_SERVICO AND DTH_SERVICO < $3`;
+  const values2 = [id_usuario, dth_servico, dth_fim_servico];
+  const result2 = yield client.query(query2, values2);
+  result = result1.rows.concat(result2.rows);
+  return result;
+});
+var findServiceSkills = (filter) => __async(null, null, function* () {
+  let result;
+  const client = yield postgressql_default;
+  let { id_servico } = filter;
+  const values = [id_servico];
+  result = yield client.query(`SELECT * FROM VW_SERVICO_HABILIDADE  
+                                WHERE ID_SERVICO = $1`, values);
+  return result.rows;
+});
+var findServiceCategories = (filter) => __async(null, null, function* () {
+  let result;
+  const client = yield postgressql_default;
+  let { id_servico } = filter;
+  const values = [id_servico];
+  result = yield client.query(`SELECT * FROM VW_SERVICO_CATEGORIA  
+                                WHERE ID_SERVICO = $1`, values);
+  return result.rows;
+});
+var findServiceProviderUsers = (filter) => __async(null, null, function* () {
+  let result;
+  const client = yield postgressql_default;
+  let { id_servico } = filter;
+  const values = [id_servico];
+  result = yield client.query(`SELECT * FROM VW_SERVICO_PRESTADOR  
+                                WHERE ID_SERVICO = $1`, values);
+  return result.rows;
+});
+var insertService = (service) => __async(null, null, function* () {
+  var _a;
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_servico, desc_servico, id_usuario_solicitante, id_projeto_pai, dth_servico, dth_fim_servico, num_tempo_estimado, num_novo_saldo, num_qtd_prestadores, id_habilidade_lista, id_categoria_lista } = service;
+    const insertQuery = `
+            INSERT INTO TB_SERVICO (nom_servico, desc_servico, id_usuario_solicitante, id_projeto_pai, dth_servico, dth_fim_servico, num_tempo_estimado, num_qtd_prestadores, id_status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ${status_default2.PENDING})
+            RETURNING id_servico;
+        `;
+    const values = [nom_servico, desc_servico, id_usuario_solicitante, id_projeto_pai, dth_servico, dth_fim_servico, num_tempo_estimado, num_qtd_prestadores];
+    const result = yield client.query(insertQuery, values);
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_servico;
+    for (const id_habilidade of id_habilidade_lista) {
+      yield client.query(`INSERT INTO TB_SERVICO_HABILIDADE(id_servico, id_habilidade) VALUES($1, $2)`, [id, id_habilidade]);
+    }
+    for (const id_categoria of id_categoria_lista) {
+      yield client.query(`INSERT INTO TB_SERVICO_CATEGORIA(id_servico, id_categoria) VALUES($1, $2)`, [id, id_categoria]);
+    }
+    yield client.query(`UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 WHERE ID_USUARIO = $2`, [num_novo_saldo, id_usuario_solicitante]);
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o inserido com sucesso",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao criar servi\xE7o",
+      error: err.message
+    };
+  }
+});
+var updateServiceProviders = (serviceProvider) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_prestador, id_novo_status } = serviceProvider;
+    const updateQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdate = [id_novo_status, id_servico];
+    yield client.query(updateQuery, valuesUpdate);
+    const insertQuery = `
+            INSERT INTO TB_SERVICO_PRESTADOR (ID_SERVICO, ID_USUARIO_PRESTADOR)
+            VALUES ($1, $2);
+        `;
+    const valuesInsert = [id_servico, id_usuario_prestador];
+    yield client.query(insertQuery, valuesInsert);
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Prestador de Servi\xE7o vinculado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao atualizar prestadores do servi\xE7o",
+      error: err.message
+    };
+  }
+});
+
+// src/api/services/services.ts
+var getServiceService = (filter) => __async(null, null, function* () {
+  let data = yield findAllServices(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var getServiceSkillsService = (filter) => __async(null, null, function* () {
+  let data = yield findServiceSkills(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var getServiceCategoriesService = (filter) => __async(null, null, function* () {
+  let data = yield findServiceCategories(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var getServiceProviderUsersService = (filter) => __async(null, null, function* () {
+  let data = yield findServiceProviderUsers(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var postServiceService = (service) => __async(null, null, function* () {
+  let response;
+  const { dth_servico, dth_fim_servico, num_qtd_prestadores, id_usuario_solicitante } = service;
+  let num_tempo_estimado = dth_fim_servico.getTime() - dth_servico.getTime();
+  num_tempo_estimado = num_tempo_estimado / (1e3 * 60 * 60);
+  const num_tempo_total = num_tempo_estimado * num_qtd_prestadores;
+  const userData = yield findAllUsers({ id_usuario: id_usuario_solicitante });
+  if (userData.length > 0) {
+    const user2 = userData[0];
+    if (user2.num_saldo_horas >= num_tempo_total) {
+      const dateConflict = yield findConflictServices({ id_usuario: id_usuario_solicitante, dth_servico, dth_fim_servico });
+      if (dateConflict.length > 0) {
+        response = yield badRequest("N\xE3o \xE9 poss\xEDvel criar o servi\xE7o por conta de conflitos de hor\xE1rios!");
+      } else {
+        service["num_tempo_estimado"] = num_tempo_estimado;
+        service["num_novo_saldo"] = user2.num_saldo_horas - num_tempo_total;
+        const result = yield insertService(service);
+        if (result.success) {
+          response = yield created(result.id);
+        } else
+          response = yield badRequest(result.message);
+      }
+    } else {
+      response = yield badRequest("Saldo de Horas do usu\xE1rio \xE9 insuficiente para solicitar servi\xE7o!");
+    }
+  } else {
+    response = yield badRequest("Usu\xE1rio inv\xE1lido!");
+  }
+  return response;
+});
+var patchServiceProvidersService = (serviceProvider) => __async(null, null, function* () {
+  let response;
+  const { id_servico, id_usuario_prestador } = serviceProvider;
+  const serviceRequiredSkills = yield findServiceSkills({ id_servico });
+  const userSkills = yield findUserSkills({ id_usuario: id_usuario_prestador });
+  const serviceSkillsIds = serviceRequiredSkills.map((elem) => elem.id_habilidade);
+  const userSkillsIds = userSkills.map((elem) => elem.id_habilidade);
+  const hasAllSkills = serviceSkillsIds.every((elem) => userSkillsIds.includes(elem));
+  if (hasAllSkills) {
+    const service = yield findAllServices({ id_servico });
+    const { dth_servico, dth_fim_servico, num_qtd_prestadores, num_qtd_prestadores_confirmados } = service[0];
+    const dateConflict = yield findConflictServices({ id_usuario: id_usuario_prestador, dth_servico, dth_fim_servico });
+    if (dateConflict.length > 0) {
+      response = yield badRequest("N\xE3o \xE9 poss\xEDvel criar o servi\xE7o por conta de conflitos de hor\xE1rios!");
+    } else {
+      let id_novo_status;
+      if (num_qtd_prestadores == num_qtd_prestadores_confirmados) {
+        response = yield badRequest("O servi\xE7o j\xE1 est\xE1 lotado!");
+      } else {
+        if (num_qtd_prestadores_confirmados + 1 == num_qtd_prestadores) {
+          id_novo_status = status_default2.TOTAL_ACCEPTED;
+        } else {
+          id_novo_status = status_default2.PARCIAL_ACCEPTED;
+        }
+        const result = yield updateServiceProviders({ id_servico, id_usuario_prestador, id_novo_status });
+        if (result.success) {
+          response = yield created(result.id);
+        } else
+          response = yield badRequest(result.message);
+      }
+    }
+  } else
+    response = yield badRequest("O usu\xE1rio deve ter as habilidades necess\xE1rias para prestar o servi\xE7o!");
+  return response;
+});
+
+// src/api/controllers/services.ts
+var getServices = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getServiceService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+var getServiceSkills = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getServiceSkillsService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+var getServiceCategories = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getServiceCategoriesService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+var getServiceProviderUsers = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getServiceProviderUsersService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+var postService = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield postServiceService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
+var patchServiceProviders = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield patchServiceProvidersService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/services.ts
+function services_default(router2) {
+  router2.get("/service", validate(getServiceSchema, "query"), authenticateToken("default"), getServices);
+  router2.get("/service/skills", validate(getSkillsByServiceSchema, "query"), authenticateToken("default"), getServiceSkills);
+  router2.get("/service/categories", validate(getCategoriesByServiceSchema, "query"), authenticateToken("default"), getServiceCategories);
+  router2.get("/service/providerUsers", validate(getProviderUsersByServiceSchema, "query"), authenticateToken("default"), getServiceProviderUsers);
+  router2.post("/service", validate(postServiceSchema, "body"), authenticateToken("default"), postService);
+  router2.patch("/service/provide", validate(patchProvideServiceSchema, "body"), authenticateToken("default"), patchServiceProviders);
+}
+
 // src/api/routes/routes.ts
 var router = (0, import_express.Router)();
 users_default(router);
 categories_default(router);
 skills_default(router);
+cities_default(router);
+states_default(router);
+status_default(router);
+services_default(router);
 var routes_default = router;
 
 // src/app.ts
@@ -740,8 +1235,10 @@ function createApp() {
 var app_default = createApp;
 
 // src/index.ts
+var import_pg2 = require("pg");
 var app = app_default();
 var port = process.env.PORT;
+import_pg2.types.setTypeParser(1114, (val) => val);
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
