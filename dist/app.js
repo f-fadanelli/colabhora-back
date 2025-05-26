@@ -723,7 +723,7 @@ var patchSkillSchema = import_zod3.z.object({
 
 // src/api/routes/skills.ts
 function skills_default(router2) {
-  router2.get("/skill", validate(getSkillSchema, "query"), authenticateToken("default"), getSkills);
+  router2.get("/skill", validate(getSkillSchema, "query"), getSkills);
   router2.post("/skill", validate(postSkillSchema, "body"), authenticateToken("admin"), postSkill);
   router2.patch("/skill", validate(patchSkillSchema, "body"), authenticateToken("admin"), patchSkillById);
 }
@@ -767,7 +767,7 @@ var getCities = (req, res) => __async(null, null, function* () {
 
 // src/api/routes/cities.ts
 function cities_default(router2) {
-  router2.get("/city", validate(getCitySchema, "query"), authenticateToken("default"), getCities);
+  router2.get("/city", validate(getCitySchema, "query"), getCities);
 }
 
 // src/library/schemas/states.ts
@@ -809,7 +809,7 @@ var getStates = (req, res) => __async(null, null, function* () {
 
 // src/api/routes/states.ts
 function states_default(router2) {
-  router2.get("/state", validate(getStateSchema, "query"), authenticateToken("default"), getStates);
+  router2.get("/state", validate(getStateSchema, "query"), getStates);
 }
 
 // src/library/schemas/status.ts

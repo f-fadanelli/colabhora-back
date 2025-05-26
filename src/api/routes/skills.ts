@@ -7,7 +7,7 @@ import { authenticateToken } from "../../library/middlewares/authentication"
 
 export default function (router: Router) {
     
-    router.get("/skill", validate(getSkillSchema, 'query'), authenticateToken('default'), getSkills)
+    router.get("/skill", validate(getSkillSchema, 'query'), getSkills)
 
     router.post("/skill", validate(postSkillSchema, 'body'), authenticateToken('admin'), postSkill)
 

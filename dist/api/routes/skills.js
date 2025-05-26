@@ -312,7 +312,7 @@ function authenticateToken(role) {
 
 // src/api/routes/skills.ts
 function skills_default(router) {
-  router.get("/skill", validate(getSkillSchema, "query"), authenticateToken("default"), getSkills);
+  router.get("/skill", validate(getSkillSchema, "query"), getSkills);
   router.post("/skill", validate(postSkillSchema, "body"), authenticateToken("admin"), postSkill);
   router.patch("/skill", validate(patchSkillSchema, "body"), authenticateToken("admin"), patchSkillById);
 }
