@@ -60,7 +60,9 @@ __export(services_exports, {
   findServiceProviderUsers: () => findServiceProviderUsers,
   findServiceSkills: () => findServiceSkills,
   insertService: () => insertService,
-  updateServiceProviders: () => updateServiceProviders
+  updateServiceFinalization: () => updateServiceFinalization,
+  updateServiceProviders: () => updateServiceProviders,
+  updateServiceRate: () => updateServiceRate
 });
 module.exports = __toCommonJS(services_exports);
 
@@ -263,6 +265,83 @@ var updateServiceProviders = (serviceProvider) => __async(null, null, function* 
     };
   }
 });
+var updateServiceFinalization = (serviceFinalization) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, id_usuario_prestador_list, num_tempo_estimado } = serviceFinalization;
+    const id_novo_status = status_default.DONE;
+    const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdateService = [id_novo_status, id_servico];
+    yield client.query(updateServiceQuery, valuesUpdateService);
+    if (num_saldo_horas_reajuste && num_saldo_horas_reajuste > 0) {
+      const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+      const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante];
+      yield client.query(updateUserQuery, valuesUpdateUser);
+    }
+    if (id_usuario_prestador_list)
+      for (const id_usuario_prestador of id_usuario_prestador_list) {
+        const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = NUM_SALDO_HORAS + $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+        const valuesUpdateUser = [num_tempo_estimado, id_usuario_prestador];
+        yield client.query(updateUserQuery, valuesUpdateUser);
+      }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o finalizado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao finalizar servi\xE7o",
+      error: err.message
+    };
+  }
+});
+var updateServiceRate = (serviceRate) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, avaliacao_usuario_list } = serviceRate;
+    for (const avaliacao_usuario of avaliacao_usuario_list) {
+      const { id_usuario, num_nota_avaliacao, desc_comentario_avaliacao } = avaliacao_usuario;
+      const updateRateQuery = `
+                    UPDATE TB_SERVICO_PRESTADOR SET NUM_NOTA_AVALIACAO = $1,
+                                                    DESC_COMENTARIO_AVALIACAO = $2 
+                    WHERE ID_SERVICO = $3
+                    AND ID_USUARIO_PRESTADOR = $4;
+                `;
+      const valuesUpdateUser = [num_nota_avaliacao, desc_comentario_avaliacao, id_servico, id_usuario];
+      yield client.query(updateRateQuery, valuesUpdateUser);
+    }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o avaliado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao avaliar servi\xE7o",
+      error: err.message
+    };
+  }
+});
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   findAllServices,
@@ -271,5 +350,7 @@ var updateServiceProviders = (serviceProvider) => __async(null, null, function* 
   findServiceProviderUsers,
   findServiceSkills,
   insertService,
-  updateServiceProviders
+  updateServiceFinalization,
+  updateServiceProviders,
+  updateServiceRate
 });

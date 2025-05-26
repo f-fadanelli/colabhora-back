@@ -26,6 +26,8 @@ __export(services_exports, {
   getServiceSchema: () => getServiceSchema,
   getSkillsByServiceSchema: () => getSkillsByServiceSchema,
   patchProvideServiceSchema: () => patchProvideServiceSchema,
+  patchServiceFinalizationSchema: () => patchServiceFinalizationSchema,
+  patchServiceRateSchema: () => patchServiceRateSchema,
   postServiceSchema: () => postServiceSchema
 });
 module.exports = __toCommonJS(services_exports);
@@ -77,6 +79,25 @@ var patchProvideServiceSchema = import_zod.z.object({
   id_usuario_prestador: import_zod.z.number().int(),
   id_novo_status: import_zod.z.number().int().optional()
 }).strict();
+var patchServiceFinalizationSchema = import_zod.z.object({
+  id_servico: import_zod.z.number().int(),
+  id_usuario_solicitante: import_zod.z.number().int().optional(),
+  num_saldo_horas_reajuste: import_zod.z.number().int().optional(),
+  num_tempo_estimado: import_zod.z.number().int().optional(),
+  id_usuario_prestador_list: import_zod.z.array(import_zod.z.number().int()).optional()
+}).strict();
+var patchServiceRateSchema = import_zod.z.object({
+  id_servico: import_zod.z.number().int(),
+  avaliacao_usuario_list: import_zod.z.array(
+    import_zod.z.object(
+      {
+        id_usuario: import_zod.z.number().int(),
+        num_nota_avaliacao: import_zod.z.number().int(),
+        desc_comentario_avaliacao: import_zod.z.string()
+      }
+    )
+  )
+}).strict();
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   getCategoriesByServiceSchema,
@@ -85,5 +106,7 @@ var patchProvideServiceSchema = import_zod.z.object({
   getServiceSchema,
   getSkillsByServiceSchema,
   patchProvideServiceSchema,
+  patchServiceFinalizationSchema,
+  patchServiceRateSchema,
   postServiceSchema
 });

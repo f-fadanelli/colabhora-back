@@ -902,6 +902,25 @@ var patchProvideServiceSchema = import_zod7.z.object({
   id_usuario_prestador: import_zod7.z.number().int(),
   id_novo_status: import_zod7.z.number().int().optional()
 }).strict();
+var patchServiceFinalizationSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.number().int(),
+  id_usuario_solicitante: import_zod7.z.number().int().optional(),
+  num_saldo_horas_reajuste: import_zod7.z.number().int().optional(),
+  num_tempo_estimado: import_zod7.z.number().int().optional(),
+  id_usuario_prestador_list: import_zod7.z.array(import_zod7.z.number().int()).optional()
+}).strict();
+var patchServiceRateSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.number().int(),
+  avaliacao_usuario_list: import_zod7.z.array(
+    import_zod7.z.object(
+      {
+        id_usuario: import_zod7.z.number().int(),
+        num_nota_avaliacao: import_zod7.z.number().int(),
+        desc_comentario_avaliacao: import_zod7.z.string()
+      }
+    )
+  )
+}).strict();
 
 // src/library/enums/status.ts
 var StatusEnum = Object.freeze({
@@ -1069,6 +1088,89 @@ var updateServiceProviders = (serviceProvider) => __async(null, null, function* 
     };
   }
 });
+var updateServiceFinalization = (serviceFinalization) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, id_usuario_prestador_list, num_tempo_estimado } = serviceFinalization;
+    const id_novo_status = status_default2.DONE;
+    const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdateService = [id_novo_status, id_servico];
+    yield client.query(updateServiceQuery, valuesUpdateService);
+    if (num_saldo_horas_reajuste && num_saldo_horas_reajuste > 0) {
+      const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+      const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante];
+      yield client.query(updateUserQuery, valuesUpdateUser);
+    }
+    if (id_usuario_prestador_list)
+      for (const id_usuario_prestador of id_usuario_prestador_list) {
+        const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = NUM_SALDO_HORAS + $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+        const valuesUpdateUser = [num_tempo_estimado, id_usuario_prestador];
+        yield client.query(updateUserQuery, valuesUpdateUser);
+      }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o finalizado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao finalizar servi\xE7o",
+      error: err.message
+    };
+  }
+});
+var updateServiceRate = (serviceRate) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, avaliacao_usuario_list } = serviceRate;
+    for (const avaliacao_usuario of avaliacao_usuario_list) {
+      const { id_usuario, num_nota_avaliacao, desc_comentario_avaliacao } = avaliacao_usuario;
+      const updateRateQuery = `
+                    UPDATE TB_SERVICO_PRESTADOR SET NUM_NOTA_AVALIACAO = $1,
+                                                    DESC_COMENTARIO_AVALIACAO = $2 
+                    WHERE ID_SERVICO = $3
+                    AND ID_USUARIO_PRESTADOR = $4;
+                `;
+      const valuesUpdateUser = [num_nota_avaliacao, desc_comentario_avaliacao, id_servico, id_usuario];
+      yield client.query(updateRateQuery, valuesUpdateUser);
+    }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o avaliado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao avaliar servi\xE7o",
+      error: err.message
+    };
+  }
+});
+
+// src/library/utils/general.ts
+var arraysNumericosIguais = (arr1, arr2) => {
+  if (arr1.length !== arr2.length) return false;
+  return arr1.every((valor, indice) => valor === arr2[indice]);
+};
 
 // src/api/services/services.ts
 var getServiceService = (filter) => __async(null, null, function* () {
@@ -1167,13 +1269,58 @@ var patchServiceProvidersService = (serviceProvider) => __async(null, null, func
         }
         const result = yield updateServiceProviders({ id_servico, id_usuario_prestador, id_novo_status });
         if (result.success) {
-          response = yield created(result.id);
+          response = yield ok(result.id);
         } else
           response = yield badRequest(result.message);
       }
     }
   } else
     response = yield badRequest("O usu\xE1rio deve ter as habilidades necess\xE1rias para prestar o servi\xE7o!");
+  return response;
+});
+var patchServiceFinalizationService = (serviceFinalization) => __async(null, null, function* () {
+  let response;
+  const serviceSearch = yield findAllServices({ id_servico: serviceFinalization.id_servico });
+  if (serviceSearch.length > 0) {
+    const service = serviceSearch[0];
+    const { id_servico, id_usuario_solicitante, num_qtd_prestadores, num_qtd_prestadores_confirmados, num_tempo_estimado } = service;
+    let num_saldo_horas_reajuste = 0;
+    if (num_qtd_prestadores_confirmados < num_qtd_prestadores) {
+      const devolucao_horas = (num_qtd_prestadores - num_qtd_prestadores_confirmados) * num_tempo_estimado;
+      const userSearch = yield findAllUsers({ id_usuario: id_usuario_solicitante });
+      const user2 = userSearch[0];
+      const { num_saldo_horas } = user2;
+      num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas;
+    }
+    const serviceProviders = yield findServiceProviderUsers({ id_servico });
+    const id_usuario_prestador_list = serviceProviders.map((elem) => parseInt(elem.id_usuario_prestador));
+    const result = yield updateServiceFinalization({ id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, num_tempo_estimado, id_usuario_prestador_list });
+    const usuario_prestador_info_list = serviceProviders.map((elem) => {
+      return { id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario };
+    });
+    if (result.success) {
+      response = yield ok({ message: result.message, id_servico: result.id, avaliar_usuarios: usuario_prestador_info_list });
+    } else
+      response = yield badRequest(result.message);
+  } else {
+    response = yield badRequest("Servi\xE7o inv\xE1lido!");
+  }
+  return response;
+});
+var patchServiceRateService = (serviceRate) => __async(null, null, function* () {
+  let response;
+  const { avaliacao_usuario_list } = serviceRate;
+  const serviceProviders = yield findServiceProviderUsers({ id_servico: serviceRate.id_servico });
+  const id_usuario_prestador_list = serviceProviders.map((elem) => parseInt(elem.id_usuario_prestador));
+  const id_usuario_avaliado_list = avaliacao_usuario_list.map((elem) => elem.id_usuario);
+  if (arraysNumericosIguais(id_usuario_prestador_list, id_usuario_avaliado_list)) {
+    const result = yield updateServiceRate(serviceRate);
+    if (result.success) {
+      response = yield ok(result);
+    } else
+      response = yield badRequest(result.message);
+  } else
+    response = yield badRequest("Lista de usu\xE1rios prestadores informados n\xE3o \xE9 compat\xEDvel com a real");
   return response;
 });
 
@@ -1208,6 +1355,16 @@ var patchServiceProviders = (req, res) => __async(null, null, function* () {
   const response = yield patchServiceProvidersService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
+var patchServiceFinalization = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield patchServiceFinalizationService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
+var patchServiceRate = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield patchServiceRateService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
 
 // src/api/routes/services.ts
 function services_default(router2) {
@@ -1217,6 +1374,8 @@ function services_default(router2) {
   router2.get("/service/providerUsers", validate(getProviderUsersByServiceSchema, "query"), authenticateToken("default"), getServiceProviderUsers);
   router2.post("/service", validate(postServiceSchema, "body"), authenticateToken("default"), postService);
   router2.patch("/service/provide", validate(patchProvideServiceSchema, "body"), authenticateToken("default"), patchServiceProviders);
+  router2.patch("/service/finalize", validate(patchServiceFinalizationSchema, "body"), authenticateToken("default"), patchServiceFinalization);
+  router2.patch("/service/rate", validate(patchServiceRateSchema, "body"), authenticateToken("default"), patchServiceRate);
 }
 
 // src/api/routes/routes.ts
