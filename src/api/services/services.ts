@@ -1,9 +1,10 @@
 import StatusEnum from "../../library/enums/status"
 import HttpResponseModel from "../../library/models/http-response"
 import { TransactionResult } from "../../library/models/transaction-response"
-import { findAllServices, findConflictServices, findServiceCategories, findServiceProviderUsers, findServiceSkills, insertService, updateServiceProviders } from "../../library/repositories/services"
+import { findAllServices, findConflictServices, findServiceCategories, findServiceProviderUsers, findServiceSkills, insertService, updateServiceFinalization, updateServiceProviders, updateServiceRate } from "../../library/repositories/services"
 import { findAllUsers, findUserSkills } from "../../library/repositories/users"
-import { ServiceCategoriesSearch, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceSearch, ServiceSkillsSearch } from "../../library/schemas/services"
+import { ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../../library/schemas/services"
+import { arraysNumericosIguais } from "../../library/utils/general"
 
 import { badRequest, created, noContent, ok } from "../../library/utils/http-response"
 
@@ -156,7 +157,7 @@ export const patchServiceProvidersService = async(serviceProvider: ServiceProvid
                 const result: TransactionResult = await updateServiceProviders({ id_servico, id_usuario_prestador, id_novo_status })
 
                 if (result.success) {
-                    response = await created(result.id)
+                    response = await ok(result.id)
                 }
                 else
                     response = await badRequest(result.message)
@@ -167,30 +168,77 @@ export const patchServiceProvidersService = async(serviceProvider: ServiceProvid
     else
         response = await badRequest('O usuário deve ter as habilidades necessárias para prestar o serviço!')
 
-    
-
     return response
 }
 
-// export const patchUserByIdService = async(user: UserUpdate):Promise<HttpResponseModel>=>{
+export const patchServiceFinalizationService = async(serviceFinalization: ServiceFinalizationUpdate):Promise<HttpResponseModel>=>{
     
-//     const data = await findAllUsers({'cod_email_usuario': user.cod_email_usuario})
-    
-//     let response
-    
-//     if(data.length>0 && data[0].id_usuario!=user.id_usuario){
-//         response = await badRequest("Usuario com o nome informado já foi cadastrada!")
-//     }
-//     else{
+    let response
 
-//         const result: TransactionResult = await updateUser(user)
-        
-//         if (result.success){ 
-//             response = await ok(result.message)
-//         }
-//         else
-//             response = await badRequest(result.message)
-//     }
+    const serviceSearch = await findAllServices({id_servico: serviceFinalization.id_servico})
     
-//     return response
-// }
+    if(serviceSearch.length>0){
+        const service = serviceSearch[0]
+
+        const {id_servico, id_usuario_solicitante, num_qtd_prestadores, num_qtd_prestadores_confirmados, num_tempo_estimado} = service
+
+        let num_saldo_horas_reajuste=0
+
+        //se a quantidade de prestadores for diferente da quantidade planejada, retorna a diferença de horas calculadas ao solicitante
+        if(num_qtd_prestadores_confirmados<num_qtd_prestadores){
+            const devolucao_horas = (num_qtd_prestadores - num_qtd_prestadores_confirmados) * num_tempo_estimado
+            const userSearch = await findAllUsers({id_usuario: id_usuario_solicitante})
+            const user = userSearch[0]
+            const {num_saldo_horas} = user
+            num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas
+        }
+
+        const serviceProviders = await findServiceProviderUsers({id_servico: id_servico})
+
+        const id_usuario_prestador_list = serviceProviders.map(elem=>parseInt(elem.id_usuario_prestador))
+        
+        const result: TransactionResult = await updateServiceFinalization({id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, num_tempo_estimado, id_usuario_prestador_list})
+        
+        const usuario_prestador_info_list = serviceProviders.map(elem=>{return {id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario}})
+        
+        if (result.success){ 
+            response = await ok({message: result.message, id_servico: result.id, avaliar_usuarios: usuario_prestador_info_list})
+        }
+        else
+            response = await badRequest(result.message)
+    }
+    else{
+        response = await badRequest('Serviço inválido!')
+    }
+    
+    return response
+}
+
+export const patchServiceRateService = async(serviceRate: ServiceRateUpdate):Promise<HttpResponseModel>=>{
+    
+    let response
+
+    const {avaliacao_usuario_list} = serviceRate
+
+    const serviceProviders = await findServiceProviderUsers({id_servico: serviceRate.id_servico})
+
+    const id_usuario_prestador_list = serviceProviders.map(elem=>parseInt(elem.id_usuario_prestador))
+
+    const id_usuario_avaliado_list = avaliacao_usuario_list.map(elem=>elem.id_usuario)
+
+    if(arraysNumericosIguais(id_usuario_prestador_list, id_usuario_avaliado_list)){
+        const result: TransactionResult = await updateServiceRate(serviceRate)
+        
+        if (result.success){ 
+            response = await ok(result)
+        }
+        else
+            response = await badRequest(result.message)    
+    }    
+    else
+        response = await badRequest('Lista de usuários prestadores informados não é compatível com a real')
+
+    
+    
+    return response
+}

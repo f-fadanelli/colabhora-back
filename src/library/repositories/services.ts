@@ -2,7 +2,7 @@ import poolPromise from "../database/postgressql"
 import StatusEnum from "../enums/status";
 import { ServiceProviderUsersModel, ServiceCategoriesModel, ServiceModel, ServiceSkillsModel } from "../models/services";
 import { TransactionResult } from "../models/transaction-response";
-import { ConflictServiceSearch, ServiceCategoriesSearch, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceSearch, ServiceSkillsSearch } from "../schemas/services";
+import { ConflictServiceSearch, ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../schemas/services";
 import { buildWhereClause } from "../utils/queryBuilder";
 
 export const findAllServices = async (filter: ServiceSearch = {}): Promise<ServiceModel[]> =>{
@@ -230,63 +230,108 @@ export const updateServiceProviders = async(serviceProvider: ServiceProviderUpda
       }
 }
 
+export const updateServiceFinalization = async(serviceFinalization: ServiceFinalizationUpdate): Promise<TransactionResult> =>{
+    const client = await poolPromise 
 
-// export const updateUser = async(user: UserUpdate): Promise<TransactionResult> =>{
-//     const client = await poolPromise 
+    try {
+        await client.query('BEGIN')
 
-//     try {
-
-//         await client.query('BEGIN')
-  
-//         const {id_usuario, nom_usuario, cod_cadastro, cod_email_usuario, id_cidade, desc_endereco, desc_area_atuacao, id_habilidade_lista} = user
-
-//         const skills = await findUserSkills({id_usuario: id_usuario})
+        const {id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, id_usuario_prestador_list, num_tempo_estimado} = serviceFinalization
         
-//         let current_skills_list = []
+        const id_novo_status = StatusEnum.DONE
 
-//         for(const skill of skills){
-//             current_skills_list.push(skill['id_habilidade'])
-//         }
+        const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
 
-//         let new_skills = id_habilidade_lista.filter(skl => !current_skills_list.includes(skl))
-//         let deleted_skills = current_skills_list.filter(skl => !id_habilidade_lista.includes(skl))
+        const valuesUpdateService = [id_novo_status, id_servico]
 
-//         for(const id_habilidade of new_skills){
-//             await client.query(`INSERT INTO TB_USUARIO_HABILIDADE(id_usuario, id_habilidade) VALUES($1, $2)`, [id_usuario, id_habilidade])
-//         }
+        await client.query(updateServiceQuery, valuesUpdateService)
 
-//         for(const id_habilidade of deleted_skills){
-//             await client.query(`DELETE FROM TB_USUARIO_HABILIDADE WHERE id_usuario = $1 AND id_habilidade = $2`, [id_usuario, id_habilidade])
-//         }
-
-//         const updateQuery = `
-//             UPDATE TB_USUARIO SET NOM_USUARIO = $1,
-//                                 COD_CADASTRO = $2,
-//                                 COD_EMAIL_USUARIO = $3,
-//                                 ID_CIDADE = $4,
-//                                 DESC_ENDERECO = $5,
-//                                 DESC_AREA_ATUACAO = $6
-//                 WHERE ID_USUARIO = $7
-//         `;
-
-//         const values = [nom_usuario, cod_cadastro, cod_email_usuario, id_cidade, desc_endereco, desc_area_atuacao, id_usuario]
-
-//         await client.query(updateQuery, values)
+        if(num_saldo_horas_reajuste && num_saldo_horas_reajuste>0){
+            const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
     
-//         await client.query('COMMIT')
+            const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante]
     
-//         return {
-//           success: true,
-//           message: 'Usuário atualizado com sucesso',
-//           id: id_usuario
-//         }
+            await client.query(updateUserQuery, valuesUpdateUser)
+        }
 
-//       } catch (err: any) {
-//         await client.query('ROLLBACK');
-//         return {
-//           success: false,
-//           message: 'Erro ao atualizar usuário',
-//           error: err.message,
-//         }
-//       }
-// }
+        if (id_usuario_prestador_list)
+            for (const id_usuario_prestador of id_usuario_prestador_list) {
+                const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = NUM_SALDO_HORAS + $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+
+                const valuesUpdateUser = [num_tempo_estimado, id_usuario_prestador]
+
+                await client.query(updateUserQuery, valuesUpdateUser)
+            }
+
+        const id = id_servico
+       
+        await client.query('COMMIT')
+    
+        return {
+          success: true,
+          message: 'Serviço finalizado com sucesso!',
+          id
+        }
+
+      } catch (err: any) {
+        await client.query('ROLLBACK');
+        return {
+          success: false,
+          message: 'Erro ao finalizar serviço',
+          error: err.message,
+        }
+      }
+}
+
+export const updateServiceRate = async(serviceRate: ServiceRateUpdate): Promise<TransactionResult> =>{
+    const client = await poolPromise 
+
+    try {
+        await client.query('BEGIN')
+
+        const {id_servico, avaliacao_usuario_list} = serviceRate
+        
+        for(const avaliacao_usuario of avaliacao_usuario_list) {
+
+            const {id_usuario, num_nota_avaliacao, desc_comentario_avaliacao} = avaliacao_usuario
+
+            const updateRateQuery = `
+                    UPDATE TB_SERVICO_PRESTADOR SET NUM_NOTA_AVALIACAO = $1,
+                                                    DESC_COMENTARIO_AVALIACAO = $2 
+                    WHERE ID_SERVICO = $3
+                    AND ID_USUARIO_PRESTADOR = $4;
+                `;
+    
+            const valuesUpdateUser = [num_nota_avaliacao, desc_comentario_avaliacao, id_servico, id_usuario]
+    
+            await client.query(updateRateQuery, valuesUpdateUser)
+        }
+
+        const id = id_servico
+       
+        await client.query('COMMIT')
+    
+        return {
+          success: true,
+          message: 'Serviço avaliado com sucesso!',
+          id
+        }
+
+      } catch (err: any) {
+        await client.query('ROLLBACK');
+        return {
+          success: false,
+          message: 'Erro ao avaliar serviço',
+          error: err.message,
+        }
+      }
+}

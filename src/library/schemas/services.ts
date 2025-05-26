@@ -54,6 +54,27 @@ export const patchProvideServiceSchema = z.object({
     id_novo_status: z.number().int().optional(),
 }).strict()
 
+export const patchServiceFinalizationSchema = z.object({
+    id_servico: z.number().int(),
+    id_usuario_solicitante: z.number().int().optional(),
+    num_saldo_horas_reajuste: z.number().int().optional(),
+    num_tempo_estimado: z.number().int().optional(),
+    id_usuario_prestador_list: z.array(z.number().int()).optional()
+}).strict()
+
+export const patchServiceRateSchema = z.object({
+  id_servico: z.number().int(),
+  avaliacao_usuario_list: z.array(
+    z.object(
+      {
+        id_usuario: z.number().int(),
+        num_nota_avaliacao: z.number().int(),
+        desc_comentario_avaliacao: z.string()
+      }
+    )
+  )
+}).strict()
+
 export type ServiceSearch = z.infer<typeof getServiceSchema>
 
 export type ConflictServiceSearch = z.infer<typeof getConflictServiceSchema>
@@ -67,3 +88,7 @@ export type ServiceProviderUsersSearch = z.infer<typeof getProviderUsersByServic
 export type ServiceInput = z.infer<typeof postServiceSchema>
 
 export type ServiceProviderUpdate = z.infer<typeof patchProvideServiceSchema>
+
+export type ServiceFinalizationUpdate = z.infer<typeof patchServiceFinalizationSchema>
+
+export type ServiceRateUpdate = z.infer<typeof patchServiceRateSchema>

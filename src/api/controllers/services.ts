@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import HttpResponseModel from "../../library/models/http-response"
-import { getServiceCategoriesService, getServiceProviderUsersService, getServiceService, getServiceSkillsService, patchServiceProvidersService, postServiceService } from "../services/services"
+import { getServiceCategoriesService, getServiceProviderUsersService, getServiceService, getServiceSkillsService, patchServiceFinalizationService, patchServiceProvidersService, patchServiceRateService, postServiceService } from "../services/services"
 
 export const getServices = async (req: Request, res: Response)=>{
     
@@ -40,6 +40,20 @@ export const postService = async (req: Request, res: Response)=>{
 export const patchServiceProviders = async (req: Request, res: Response)=>{
     
     const response:HttpResponseModel = await patchServiceProvidersService(req.validated?.body)
+
+    res.status(response.statusCode).json(response.body)
+}
+
+export const patchServiceFinalization = async (req: Request, res: Response)=>{
+    
+    const response:HttpResponseModel = await patchServiceFinalizationService(req.validated?.body)
+
+    res.status(response.statusCode).json(response.body)
+}
+
+export const patchServiceRate = async (req: Request, res: Response)=>{
+    
+    const response:HttpResponseModel = await patchServiceRateService(req.validated?.body)
 
     res.status(response.statusCode).json(response.body)
 }

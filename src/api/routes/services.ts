@@ -2,8 +2,8 @@
 import { Router } from "express"
 import { validate } from "../../library/middlewares/validation"
 import { authenticateToken } from "../../library/middlewares/authentication"
-import { getCategoriesByServiceSchema, getProviderUsersByServiceSchema, getServiceSchema, getSkillsByServiceSchema, patchProvideServiceSchema, postServiceSchema } from "../../library/schemas/services"
-import { getServiceCategories, getServiceProviderUsers, getServices, getServiceSkills, patchServiceProviders, postService } from "../controllers/services"
+import { getCategoriesByServiceSchema, getProviderUsersByServiceSchema, getServiceSchema, getSkillsByServiceSchema, patchProvideServiceSchema, patchServiceFinalizationSchema, patchServiceRateSchema, postServiceSchema } from "../../library/schemas/services"
+import { getServiceCategories, getServiceProviderUsers, getServices, getServiceSkills, patchServiceFinalization, patchServiceProviders, patchServiceRate, postService } from "../controllers/services"
 
 export default function (router: Router) {
     
@@ -18,4 +18,9 @@ export default function (router: Router) {
     router.post("/service", validate(postServiceSchema, 'body'), authenticateToken('default'), postService)
 
     router.patch("/service/provide", validate(patchProvideServiceSchema, 'body'), authenticateToken('default'), patchServiceProviders)
+
+    router.patch("/service/finalize", validate(patchServiceFinalizationSchema, 'body'), authenticateToken('default'), patchServiceFinalization)
+
+    router.patch("/service/rate", validate(patchServiceRateSchema, 'body'), authenticateToken('default'), patchServiceRate)
+
 }
