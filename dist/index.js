@@ -56,6 +56,9 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
+// src/index.ts
+var import_pg2 = require("pg");
+
 // src/app.ts
 var import_express2 = __toESM(require("express"));
 
@@ -1380,24 +1383,47 @@ services_default(router);
 var routes_default = router;
 
 // src/app.ts
-var import_cors = __toESM(require("cors"));
-function createApp() {
-  const app2 = (0, import_express2.default)();
-  app2.use(import_express2.default.json());
-  app2.use("/api/v1", routes_default);
-  const corsOptions = {
-    origin: "*"
-  };
-  app2.use((0, import_cors.default)(corsOptions));
-  return app2;
-}
-var app_default = createApp;
+var Server = class {
+  constructor() {
+    this.app = (0, import_express2.default)();
+    this.middlewares();
+    this.routes();
+  }
+  middlewares() {
+    this.app.use(import_express2.default.json({ limit: "500mb" }));
+    this.app.use(import_express2.default.urlencoded({
+      limit: "500mb",
+      extended: true,
+      parameterLimit: 5e5
+    }));
+    this.app.use((req, res, next) => {
+      const origin = req.get("Origin") || "*";
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, PATCH, OPTIONS");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "*, access-control-allow-headers, x-authorization-method, accept-language, authentication, referer, cache-control, Access, Content-type, Authorization, Accept, Origin, X-Requested-With, x-api-key, x-ms-access-token, access-control-allow-origin"
+      );
+      res.header("Access-Control-Allow-Credentials", "true");
+      if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+      }
+      next();
+    });
+  }
+  routes() {
+    this.app.use("/api/v1", routes_default);
+  }
+  getApp() {
+    return this.app;
+  }
+};
 
 // src/index.ts
-var import_pg2 = require("pg");
-var app = app_default();
-var port = process.env.PORT;
 import_pg2.types.setTypeParser(1114, (val) => val);
+var port = process.env.PORT;
+var server = new Server();
+var app = server.getApp();
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
