@@ -60,14 +60,14 @@ export const validateUserLoginService = async(user: UserValidate):Promise<HttpRe
         const valid = await bcrypt.compare(user.cod_senha_usuario, foundUser.cod_senha_usuario)
 
         if (!valid) 
-            response = await badRequest("Invalid Credentials")
+            response = await badRequest("Credenciais Inválidas!")
         else{
             const token = jwt.sign({ id_usuario: foundUser.id_usuario, flg_tipo_usuario: foundUser.flg_tipo_usuario }, JWT_SECRET, { expiresIn: '2h' })
             response = await ok({token})
         }
     }
     else{
-        response = await badRequest("Invalid Credentials")
+        response = await badRequest("Credenciais Inválidas!")
     }
     
     return response

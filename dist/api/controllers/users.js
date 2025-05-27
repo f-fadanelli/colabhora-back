@@ -268,13 +268,13 @@ var validateUserLoginService = (user2) => __async(null, null, function* () {
     const foundUser = data[0];
     const valid = yield import_bcrypt.default.compare(user2.cod_senha_usuario, foundUser.cod_senha_usuario);
     if (!valid)
-      response = yield badRequest("Invalid Credentials");
+      response = yield badRequest("Credenciais Inv\xE1lidas!");
     else {
       const token = import_jsonwebtoken.default.sign({ id_usuario: foundUser.id_usuario, flg_tipo_usuario: foundUser.flg_tipo_usuario }, JWT_SECRET, { expiresIn: "2h" });
       response = yield ok({ token });
     }
   } else {
-    response = yield badRequest("Invalid Credentials");
+    response = yield badRequest("Credenciais Inv\xE1lidas!");
   }
   return response;
 });
