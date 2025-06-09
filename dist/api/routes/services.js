@@ -211,6 +211,11 @@ var patchServiceFinalizationSchema = import_zod.z.object({
   num_tempo_estimado: import_zod.z.number().int().optional(),
   id_usuario_prestador_list: import_zod.z.array(import_zod.z.number().int()).optional()
 }).strict();
+var patchServiceCancelationSchema = import_zod.z.object({
+  id_servico: import_zod.z.number().int(),
+  id_usuario_solicitante: import_zod.z.number().int().optional(),
+  num_saldo_horas_reajuste: import_zod.z.number().int().optional()
+}).strict();
 var patchServiceRateSchema = import_zod.z.object({
   id_servico: import_zod.z.number().int(),
   avaliacao_usuario_list: import_zod.z.array(
@@ -468,6 +473,42 @@ var updateServiceFinalization = (serviceFinalization) => __async(null, null, fun
     };
   }
 });
+var updateServiceCancelation = (serviceFinalization) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_solicitante, num_saldo_horas_reajuste } = serviceFinalization;
+    const id_novo_status = status_default.CANCELED;
+    const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdateService = [id_novo_status, id_servico];
+    yield client.query(updateServiceQuery, valuesUpdateService);
+    if (num_saldo_horas_reajuste && num_saldo_horas_reajuste > 0) {
+      const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+      const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante];
+      yield client.query(updateUserQuery, valuesUpdateUser);
+    }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o cancelado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao cancelar servi\xE7o",
+      error: err.message
+    };
+  }
+});
 var updateServiceRate = (serviceRate) => __async(null, null, function* () {
   const client = yield postgressql_default;
   try {
@@ -587,7 +628,11 @@ var postServiceService = (service) => __async(null, null, function* () {
         response = yield badRequest("N\xE3o \xE9 poss\xEDvel criar o servi\xE7o por conta de conflitos de hor\xE1rios!");
       } else {
         service["num_tempo_estimado"] = num_tempo_estimado;
-        service["num_novo_saldo"] = user2.num_saldo_horas - num_tempo_total;
+        if (user2.flg_tipo_usuario == "PF") {
+          service["num_novo_saldo"] = user2.num_saldo_horas - num_tempo_total;
+        } else {
+          service["num_novo_saldo"] = user2.num_saldo_horas;
+        }
         const result = yield insertService(service);
         if (result.success) {
           response = yield created(result.id);
@@ -666,6 +711,27 @@ var patchServiceFinalizationService = (serviceFinalization) => __async(null, nul
   }
   return response;
 });
+var patchServiceCancelationService = (serviceCancelation) => __async(null, null, function* () {
+  let response;
+  const serviceSearch = yield findAllServices({ id_servico: serviceCancelation.id_servico });
+  if (serviceSearch.length > 0) {
+    const service = serviceSearch[0];
+    const { id_servico, id_usuario_solicitante, num_qtd_prestadores, num_tempo_estimado } = service;
+    const devolucao_horas = num_qtd_prestadores * num_tempo_estimado;
+    const userSearch = yield findAllUsers({ id_usuario: id_usuario_solicitante });
+    const user2 = userSearch[0];
+    const { num_saldo_horas } = user2;
+    const num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas;
+    const result = yield updateServiceCancelation({ id_servico, id_usuario_solicitante, num_saldo_horas_reajuste });
+    if (result.success) {
+      response = yield ok({ message: result.message, id_servico: result.id });
+    } else
+      response = yield badRequest(result.message);
+  } else {
+    response = yield badRequest("Servi\xE7o inv\xE1lido!");
+  }
+  return response;
+});
 var patchServiceRateService = (serviceRate) => __async(null, null, function* () {
   let response;
   const { avaliacao_usuario_list } = serviceRate;
@@ -719,6 +785,11 @@ var patchServiceFinalization = (req, res) => __async(null, null, function* () {
   const response = yield patchServiceFinalizationService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
+var patchServiceCancelation = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield patchServiceCancelationService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
 var patchServiceRate = (req, res) => __async(null, null, function* () {
   var _a;
   const response = yield patchServiceRateService((_a = req.validated) == null ? void 0 : _a.body);
@@ -734,5 +805,6 @@ function services_default(router) {
   router.post("/service", validate(postServiceSchema, "body"), authenticateToken("default"), postService);
   router.patch("/service/provide", validate(patchProvideServiceSchema, "body"), authenticateToken("default"), patchServiceProviders);
   router.patch("/service/finalize", validate(patchServiceFinalizationSchema, "body"), authenticateToken("default"), patchServiceFinalization);
+  router.patch("/service/cancel", validate(patchServiceCancelationSchema, "body"), authenticateToken("default"), patchServiceCancelation);
   router.patch("/service/rate", validate(patchServiceRateSchema, "body"), authenticateToken("default"), patchServiceRate);
 }

@@ -909,6 +909,11 @@ var patchServiceFinalizationSchema = import_zod7.z.object({
   num_tempo_estimado: import_zod7.z.number().int().optional(),
   id_usuario_prestador_list: import_zod7.z.array(import_zod7.z.number().int()).optional()
 }).strict();
+var patchServiceCancelationSchema = import_zod7.z.object({
+  id_servico: import_zod7.z.number().int(),
+  id_usuario_solicitante: import_zod7.z.number().int().optional(),
+  num_saldo_horas_reajuste: import_zod7.z.number().int().optional()
+}).strict();
 var patchServiceRateSchema = import_zod7.z.object({
   id_servico: import_zod7.z.number().int(),
   avaliacao_usuario_list: import_zod7.z.array(
@@ -1133,6 +1138,42 @@ var updateServiceFinalization = (serviceFinalization) => __async(null, null, fun
     };
   }
 });
+var updateServiceCancelation = (serviceFinalization) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_solicitante, num_saldo_horas_reajuste } = serviceFinalization;
+    const id_novo_status = status_default2.CANCELED;
+    const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdateService = [id_novo_status, id_servico];
+    yield client.query(updateServiceQuery, valuesUpdateService);
+    if (num_saldo_horas_reajuste && num_saldo_horas_reajuste > 0) {
+      const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+      const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante];
+      yield client.query(updateUserQuery, valuesUpdateUser);
+    }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o cancelado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao cancelar servi\xE7o",
+      error: err.message
+    };
+  }
+});
 var updateServiceRate = (serviceRate) => __async(null, null, function* () {
   const client = yield postgressql_default;
   try {
@@ -1228,7 +1269,11 @@ var postServiceService = (service) => __async(null, null, function* () {
         response = yield badRequest("N\xE3o \xE9 poss\xEDvel criar o servi\xE7o por conta de conflitos de hor\xE1rios!");
       } else {
         service["num_tempo_estimado"] = num_tempo_estimado;
-        service["num_novo_saldo"] = user2.num_saldo_horas - num_tempo_total;
+        if (user2.flg_tipo_usuario == "PF") {
+          service["num_novo_saldo"] = user2.num_saldo_horas - num_tempo_total;
+        } else {
+          service["num_novo_saldo"] = user2.num_saldo_horas;
+        }
         const result = yield insertService(service);
         if (result.success) {
           response = yield created(result.id);
@@ -1307,6 +1352,27 @@ var patchServiceFinalizationService = (serviceFinalization) => __async(null, nul
   }
   return response;
 });
+var patchServiceCancelationService = (serviceCancelation) => __async(null, null, function* () {
+  let response;
+  const serviceSearch = yield findAllServices({ id_servico: serviceCancelation.id_servico });
+  if (serviceSearch.length > 0) {
+    const service = serviceSearch[0];
+    const { id_servico, id_usuario_solicitante, num_qtd_prestadores, num_tempo_estimado } = service;
+    const devolucao_horas = num_qtd_prestadores * num_tempo_estimado;
+    const userSearch = yield findAllUsers({ id_usuario: id_usuario_solicitante });
+    const user2 = userSearch[0];
+    const { num_saldo_horas } = user2;
+    const num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas;
+    const result = yield updateServiceCancelation({ id_servico, id_usuario_solicitante, num_saldo_horas_reajuste });
+    if (result.success) {
+      response = yield ok({ message: result.message, id_servico: result.id });
+    } else
+      response = yield badRequest(result.message);
+  } else {
+    response = yield badRequest("Servi\xE7o inv\xE1lido!");
+  }
+  return response;
+});
 var patchServiceRateService = (serviceRate) => __async(null, null, function* () {
   let response;
   const { avaliacao_usuario_list } = serviceRate;
@@ -1360,6 +1426,11 @@ var patchServiceFinalization = (req, res) => __async(null, null, function* () {
   const response = yield patchServiceFinalizationService((_a = req.validated) == null ? void 0 : _a.body);
   res.status(response.statusCode).json(response.body);
 });
+var patchServiceCancelation = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield patchServiceCancelationService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
 var patchServiceRate = (req, res) => __async(null, null, function* () {
   var _a;
   const response = yield patchServiceRateService((_a = req.validated) == null ? void 0 : _a.body);
@@ -1375,7 +1446,130 @@ function services_default(router2) {
   router2.post("/service", validate(postServiceSchema, "body"), authenticateToken("default"), postService);
   router2.patch("/service/provide", validate(patchProvideServiceSchema, "body"), authenticateToken("default"), patchServiceProviders);
   router2.patch("/service/finalize", validate(patchServiceFinalizationSchema, "body"), authenticateToken("default"), patchServiceFinalization);
+  router2.patch("/service/cancel", validate(patchServiceCancelationSchema, "body"), authenticateToken("default"), patchServiceCancelation);
   router2.patch("/service/rate", validate(patchServiceRateSchema, "body"), authenticateToken("default"), patchServiceRate);
+}
+
+// src/library/schemas/projects.ts
+var import_zod8 = require("zod");
+var getProjectSchema = import_zod8.z.object({
+  id_projeto: import_zod8.z.coerce.number().int().optional(),
+  nom_projeto: import_zod8.z.string().optional(),
+  id_usuario_responsavel: import_zod8.z.coerce.number().int().optional(),
+  dth_inicio_low: import_zod8.z.coerce.date().optional(),
+  dth_inicio_high: import_zod8.z.coerce.date().optional(),
+  dth_fim_low: import_zod8.z.coerce.date().optional(),
+  dth_fim_high: import_zod8.z.coerce.date().optional()
+}).strict();
+var postProjectSchema = import_zod8.z.object({
+  nom_projeto: import_zod8.z.string(),
+  desc_projeto: import_zod8.z.string(),
+  id_usuario_responsavel: import_zod8.z.number().int(),
+  dth_inicio: import_zod8.z.coerce.date(),
+  dth_fim: import_zod8.z.coerce.date()
+}).strict();
+
+// src/library/repositories/projects.ts
+var findAllProjects = (..._0) => __async(null, [..._0], function* (filter = {}) {
+  let result;
+  const client = yield postgressql_default;
+  let _a = filter, { dth_inicio_low, dth_inicio_high, dth_fim_low, dth_fim_high } = _a, newFilter = __objRest(_a, ["dth_inicio_low", "dth_inicio_high", "dth_fim_low", "dth_fim_high"]);
+  let { clause, values } = buildWhereClause(newFilter);
+  if (dth_inicio_low || dth_inicio_high) {
+    const lowDate = dth_inicio_low ? dth_inicio_low : dth_inicio_high ? dth_inicio_high : (/* @__PURE__ */ new Date()).toISOString();
+    const highDate = dth_inicio_high ? dth_inicio_high : dth_inicio_low ? dth_inicio_low : (/* @__PURE__ */ new Date()).toISOString();
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} DTH_INICIO BETWEEN $${values.length + 1} AND $${values.length + 2} `;
+    values.push(lowDate);
+    values.push(highDate);
+  }
+  if (dth_fim_low || dth_fim_high) {
+    const lowDate = dth_fim_low ? dth_fim_low : dth_fim_high ? dth_fim_high : (/* @__PURE__ */ new Date()).toISOString();
+    const highDate = dth_fim_high ? dth_fim_high : dth_fim_low ? dth_fim_low : (/* @__PURE__ */ new Date()).toISOString();
+    clause += ` ${values.length === 0 ? "WHERE" : "AND"} DTH_FIM BETWEEN $${values.length + 1} AND $${values.length + 2} `;
+    values.push(lowDate);
+    values.push(highDate);
+  }
+  const query = `SELECT * FROM VW_PROJETO ${clause} ORDER BY ID_PROJETO DESC`;
+  result = yield client.query(query, values);
+  return result.rows;
+});
+var insertProject = (project) => __async(null, null, function* () {
+  var _a;
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { nom_projeto, desc_projeto, id_usuario_responsavel, dth_inicio, dth_fim } = project;
+    const insertQuery = `
+            INSERT INTO TB_PROJETO (nom_projeto, desc_projeto, id_usuario_responsavel, dth_inicio, dth_fim)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id_projeto;
+        `;
+    const values = [nom_projeto, desc_projeto, id_usuario_responsavel, dth_inicio, dth_fim];
+    const result = yield client.query(insertQuery, values);
+    const id = (_a = result.rows[0]) == null ? void 0 : _a.id_projeto;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Projeto inserido com sucesso",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao criar projeto",
+      error: err.message
+    };
+  }
+});
+
+// src/api/services/projects.ts
+var getProjectService = (filter) => __async(null, null, function* () {
+  const data = yield findAllProjects(filter);
+  let response;
+  if (data.length > 0) {
+    response = yield ok(data);
+  } else {
+    response = yield noContent();
+  }
+  return response;
+});
+var postProjectService = (project) => __async(null, null, function* () {
+  const data = yield findAllUsers({ "id_usuario": project.id_usuario_responsavel });
+  let response;
+  if (data.length > 0) {
+    const user2 = data[0];
+    if (user2.flg_tipo_usuario != "PJ") {
+      response = yield badRequest("Usu\xE1rio deve ser do tipo PJ!");
+    } else {
+      const result = yield insertProject(project);
+      if (result.success) {
+        response = yield created(result.id);
+      } else
+        response = yield badRequest(result.message);
+    }
+  } else {
+    response = yield badRequest("Usu\xE1rio inv\xE1lido!");
+  }
+  return response;
+});
+
+// src/api/controllers/projects.ts
+var getProjects = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield getProjectService((_a = req.validated) == null ? void 0 : _a.query);
+  res.status(response.statusCode).json(response.body);
+});
+var postProject = (req, res) => __async(null, null, function* () {
+  var _a;
+  const response = yield postProjectService((_a = req.validated) == null ? void 0 : _a.body);
+  res.status(response.statusCode).json(response.body);
+});
+
+// src/api/routes/projects.ts
+function projects_default(router2) {
+  router2.get("/project", validate(getProjectSchema, "query"), authenticateToken("default"), getProjects);
+  router2.post("/project", validate(postProjectSchema, "body"), authenticateToken("default"), postProject);
 }
 
 // src/api/routes/routes.ts
@@ -1387,6 +1581,7 @@ cities_default(router);
 states_default(router);
 status_default(router);
 services_default(router);
+projects_default(router);
 var routes_default = router;
 
 // src/app.ts

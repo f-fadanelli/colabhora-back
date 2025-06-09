@@ -62,6 +62,12 @@ export const patchServiceFinalizationSchema = z.object({
     id_usuario_prestador_list: z.array(z.number().int()).optional()
 }).strict()
 
+export const patchServiceCancelationSchema = z.object({
+    id_servico: z.number().int(),
+    id_usuario_solicitante: z.number().int().optional(),
+    num_saldo_horas_reajuste: z.number().int().optional()
+}).strict()
+
 export const patchServiceRateSchema = z.object({
   id_servico: z.number().int(),
   avaliacao_usuario_list: z.array(
@@ -90,5 +96,7 @@ export type ServiceInput = z.infer<typeof postServiceSchema>
 export type ServiceProviderUpdate = z.infer<typeof patchProvideServiceSchema>
 
 export type ServiceFinalizationUpdate = z.infer<typeof patchServiceFinalizationSchema>
+
+export type ServiceCancelationUpdate = z.infer<typeof patchServiceCancelationSchema>
 
 export type ServiceRateUpdate = z.infer<typeof patchServiceRateSchema>

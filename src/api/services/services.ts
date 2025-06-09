@@ -1,9 +1,9 @@
 import StatusEnum from "../../library/enums/status"
 import HttpResponseModel from "../../library/models/http-response"
 import { TransactionResult } from "../../library/models/transaction-response"
-import { findAllServices, findConflictServices, findServiceCategories, findServiceProviderUsers, findServiceSkills, insertService, updateServiceFinalization, updateServiceProviders, updateServiceRate } from "../../library/repositories/services"
+import { findAllServices, findConflictServices, findServiceCategories, findServiceProviderUsers, findServiceSkills, insertService, updateServiceCancelation, updateServiceFinalization, updateServiceProviders, updateServiceRate } from "../../library/repositories/services"
 import { findAllUsers, findUserSkills } from "../../library/repositories/users"
-import { ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../../library/schemas/services"
+import { ServiceCancelationUpdate, ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../../library/schemas/services"
 import { arraysNumericosIguais } from "../../library/utils/general"
 
 import { badRequest, created, noContent, ok } from "../../library/utils/http-response"
@@ -94,7 +94,13 @@ export const postServiceService = async(service: ServiceInput):Promise<HttpRespo
             }
             else {
                 service['num_tempo_estimado'] = num_tempo_estimado
-                service['num_novo_saldo'] = user.num_saldo_horas - num_tempo_total
+
+                if(user.flg_tipo_usuario=='PF'){
+                    service['num_novo_saldo'] = user.num_saldo_horas - num_tempo_total
+                }
+                else{
+                    service['num_novo_saldo'] = user.num_saldo_horas
+                }
 
                 const result: TransactionResult = await insertService(service)
 
@@ -213,6 +219,39 @@ export const patchServiceFinalizationService = async(serviceFinalization: Servic
     
     return response
 }
+
+export const patchServiceCancelationService = async(serviceCancelation: ServiceCancelationUpdate):Promise<HttpResponseModel>=>{
+    
+    let response
+
+    const serviceSearch = await findAllServices({id_servico: serviceCancelation.id_servico})
+    
+    if(serviceSearch.length>0){
+        const service = serviceSearch[0]
+
+        const {id_servico, id_usuario_solicitante, num_qtd_prestadores, num_tempo_estimado} = service
+
+        const devolucao_horas = num_qtd_prestadores * num_tempo_estimado
+        const userSearch = await findAllUsers({id_usuario: id_usuario_solicitante})
+        const user = userSearch[0]
+        const {num_saldo_horas} = user
+        const num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas
+
+        const result: TransactionResult = await updateServiceCancelation({id_servico, id_usuario_solicitante, num_saldo_horas_reajuste})
+         
+        if (result.success){ 
+            response = await ok({message: result.message, id_servico: result.id})
+        }
+        else
+            response = await badRequest(result.message)
+    }
+    else{
+        response = await badRequest('Serviço inválido!')
+    }
+    
+    return response
+}
+
 
 export const patchServiceRateService = async(serviceRate: ServiceRateUpdate):Promise<HttpResponseModel>=>{
     

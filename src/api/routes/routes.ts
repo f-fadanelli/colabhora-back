@@ -6,6 +6,7 @@ import cities from './cities'
 import states from './states'
 import status from './status'
 import services from "./services"
+import projects from "./projects"
 
 const router = Router()
 
@@ -16,6 +17,7 @@ cities(router)
 states(router)
 status(router)
 services(router)
+projects(router)
 
 
 export default router

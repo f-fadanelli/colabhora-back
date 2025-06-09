@@ -2,7 +2,7 @@ import poolPromise from "../database/postgressql"
 import StatusEnum from "../enums/status";
 import { ServiceProviderUsersModel, ServiceCategoriesModel, ServiceModel, ServiceSkillsModel } from "../models/services";
 import { TransactionResult } from "../models/transaction-response";
-import { ConflictServiceSearch, ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../schemas/services";
+import { ConflictServiceSearch, ServiceCancelationUpdate, ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../schemas/services";
 import { buildWhereClause } from "../utils/queryBuilder";
 
 export const findAllServices = async (filter: ServiceSearch = {}): Promise<ServiceModel[]> =>{
@@ -287,6 +287,56 @@ export const updateServiceFinalization = async(serviceFinalization: ServiceFinal
         return {
           success: false,
           message: 'Erro ao finalizar serviço',
+          error: err.message,
+        }
+      }
+}
+
+export const updateServiceCancelation = async(serviceFinalization: ServiceCancelationUpdate): Promise<TransactionResult> =>{
+    const client = await poolPromise 
+
+    try {
+        await client.query('BEGIN')
+
+        const {id_servico, id_usuario_solicitante, num_saldo_horas_reajuste} = serviceFinalization
+        
+        const id_novo_status = StatusEnum.CANCELED
+
+        const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+
+        const valuesUpdateService = [id_novo_status, id_servico]
+
+        await client.query(updateServiceQuery, valuesUpdateService)
+
+        if(num_saldo_horas_reajuste && num_saldo_horas_reajuste>0){
+            const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+    
+            const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante]
+    
+            await client.query(updateUserQuery, valuesUpdateUser)
+        }
+
+        const id = id_servico
+       
+        await client.query('COMMIT')
+    
+        return {
+          success: true,
+          message: 'Serviço cancelado com sucesso!',
+          id
+        }
+
+      } catch (err: any) {
+        await client.query('ROLLBACK');
+        return {
+          success: false,
+          message: 'Erro ao cancelar serviço',
           error: err.message,
         }
       }

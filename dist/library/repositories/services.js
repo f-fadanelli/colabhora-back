@@ -60,6 +60,7 @@ __export(services_exports, {
   findServiceProviderUsers: () => findServiceProviderUsers,
   findServiceSkills: () => findServiceSkills,
   insertService: () => insertService,
+  updateServiceCancelation: () => updateServiceCancelation,
   updateServiceFinalization: () => updateServiceFinalization,
   updateServiceProviders: () => updateServiceProviders,
   updateServiceRate: () => updateServiceRate
@@ -310,6 +311,42 @@ var updateServiceFinalization = (serviceFinalization) => __async(null, null, fun
     };
   }
 });
+var updateServiceCancelation = (serviceFinalization) => __async(null, null, function* () {
+  const client = yield postgressql_default;
+  try {
+    yield client.query("BEGIN");
+    const { id_servico, id_usuario_solicitante, num_saldo_horas_reajuste } = serviceFinalization;
+    const id_novo_status = status_default.CANCELED;
+    const updateServiceQuery = `
+            UPDATE TB_SERVICO SET ID_STATUS = $1 
+            WHERE ID_SERVICO = $2;
+        `;
+    const valuesUpdateService = [id_novo_status, id_servico];
+    yield client.query(updateServiceQuery, valuesUpdateService);
+    if (num_saldo_horas_reajuste && num_saldo_horas_reajuste > 0) {
+      const updateUserQuery = `
+                    UPDATE TB_USUARIO SET NUM_SALDO_HORAS = $1 
+                    WHERE ID_USUARIO = $2;
+                `;
+      const valuesUpdateUser = [num_saldo_horas_reajuste, id_usuario_solicitante];
+      yield client.query(updateUserQuery, valuesUpdateUser);
+    }
+    const id = id_servico;
+    yield client.query("COMMIT");
+    return {
+      success: true,
+      message: "Servi\xE7o cancelado com sucesso!",
+      id
+    };
+  } catch (err) {
+    yield client.query("ROLLBACK");
+    return {
+      success: false,
+      message: "Erro ao cancelar servi\xE7o",
+      error: err.message
+    };
+  }
+});
 var updateServiceRate = (serviceRate) => __async(null, null, function* () {
   const client = yield postgressql_default;
   try {
@@ -350,6 +387,7 @@ var updateServiceRate = (serviceRate) => __async(null, null, function* () {
   findServiceProviderUsers,
   findServiceSkills,
   insertService,
+  updateServiceCancelation,
   updateServiceFinalization,
   updateServiceProviders,
   updateServiceRate

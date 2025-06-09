@@ -26,6 +26,7 @@ __export(services_exports, {
   getServiceSchema: () => getServiceSchema,
   getSkillsByServiceSchema: () => getSkillsByServiceSchema,
   patchProvideServiceSchema: () => patchProvideServiceSchema,
+  patchServiceCancelationSchema: () => patchServiceCancelationSchema,
   patchServiceFinalizationSchema: () => patchServiceFinalizationSchema,
   patchServiceRateSchema: () => patchServiceRateSchema,
   postServiceSchema: () => postServiceSchema
@@ -86,6 +87,11 @@ var patchServiceFinalizationSchema = import_zod.z.object({
   num_tempo_estimado: import_zod.z.number().int().optional(),
   id_usuario_prestador_list: import_zod.z.array(import_zod.z.number().int()).optional()
 }).strict();
+var patchServiceCancelationSchema = import_zod.z.object({
+  id_servico: import_zod.z.number().int(),
+  id_usuario_solicitante: import_zod.z.number().int().optional(),
+  num_saldo_horas_reajuste: import_zod.z.number().int().optional()
+}).strict();
 var patchServiceRateSchema = import_zod.z.object({
   id_servico: import_zod.z.number().int(),
   avaliacao_usuario_list: import_zod.z.array(
@@ -106,6 +112,7 @@ var patchServiceRateSchema = import_zod.z.object({
   getServiceSchema,
   getSkillsByServiceSchema,
   patchProvideServiceSchema,
+  patchServiceCancelationSchema,
   patchServiceFinalizationSchema,
   patchServiceRateSchema,
   postServiceSchema
