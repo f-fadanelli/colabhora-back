@@ -7,6 +7,7 @@ import { ServiceCancelationUpdate, ServiceCategoriesSearch, ServiceFinalizationU
 import { arraysNumericosIguais } from "../../library/utils/general"
 
 import { badRequest, created, noContent, ok } from "../../library/utils/http-response"
+import { sendEmail } from "../../library/utils/mails"
 
 export const getServiceService = async(filter: ServiceSearch):Promise<HttpResponseModel>=>{
     let data = await findAllServices(filter)
@@ -105,6 +106,15 @@ export const postServiceService = async(service: ServiceInput):Promise<HttpRespo
                 const result: TransactionResult = await insertService(service)
 
                 if (result.success) {
+                    const subject = `Criação de Serviço ${result.id}: ${service.nom_servico}`
+                    const text = `Olá, ${user.nom_usuario}! Seu novo serviço foi criado com o código ${result.id}!`
+                    const receivers = [user.cod_email_usuario] 
+                    const emailNotification = await sendEmail(receivers, subject, text)
+                    
+                    if(emailNotification.success){
+                        console.log('Enviado')
+                    }
+                    
                     response = await created(result.id)
                 }
                 else
@@ -138,9 +148,14 @@ export const patchServiceProvidersService = async(serviceProvider: ServiceProvid
     const hasAllSkills = serviceSkillsIds.every(elem => userSkillsIds.includes(elem))
 
     if (hasAllSkills) {
+
+        const providerUserSearch = await findAllUsers({id_usuario: id_usuario_prestador})
+        const providerUser = providerUserSearch[0]
+        
         //valida hora de serviço e usuário
-        const service = await findAllServices({ id_servico: id_servico })
-        const { dth_servico, dth_fim_servico, num_qtd_prestadores, num_qtd_prestadores_confirmados } = service[0]
+        const serviceSearch = await findAllServices({ id_servico: id_servico })
+        const service = serviceSearch[0]
+        const { dth_servico, dth_fim_servico, num_qtd_prestadores, num_qtd_prestadores_confirmados } = service
         const dateConflict = await findConflictServices({ id_usuario: id_usuario_prestador, dth_servico, dth_fim_servico })
         if (dateConflict.length > 0) {
             response = await badRequest("Não é possível criar o serviço por conta de conflitos de horários!")
@@ -163,6 +178,15 @@ export const patchServiceProvidersService = async(serviceProvider: ServiceProvid
                 const result: TransactionResult = await updateServiceProviders({ id_servico, id_usuario_prestador, id_novo_status })
 
                 if (result.success) {
+                    const subject = `Aceite do Serviço ${id_servico}: ${service.nom_servico}`
+                    const text = `Olá! Serviço ${id_servico} aceito por ${providerUser.nom_usuario}!`
+                    const receivers = [providerUser.cod_email_usuario, service.cod_email_usuario] 
+                    const emailNotification = await sendEmail(receivers, subject, text)
+                    
+                    if(emailNotification.success){
+                        console.log('Enviado')
+                    }
+                    
                     response = await ok(result.id)
                 }
                 else
@@ -205,9 +229,19 @@ export const patchServiceFinalizationService = async(serviceFinalization: Servic
         
         const result: TransactionResult = await updateServiceFinalization({id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, num_tempo_estimado, id_usuario_prestador_list})
         
-        const usuario_prestador_info_list = serviceProviders.map(elem=>{return {id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario}})
+        const usuario_prestador_info_list = serviceProviders.map(elem=>{return {id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario_prestador}})
         
         if (result.success){ 
+            let receivers = serviceProviders.map(elem=>elem.cod_email_usuario_prestador)
+            receivers.push(service.cod_email_usuario)
+            const subject = `Finalização do Serviço ${id_servico}: ${service.nom_servico}`
+            const text = `Olá! Serviço ${id_servico} finalizado com sucesso!`
+            const emailNotification = await sendEmail(receivers, subject, text)
+
+            if (emailNotification.success) {
+                console.log('Enviado')
+            }
+
             response = await ok({message: result.message, id_servico: result.id, avaliar_usuarios: usuario_prestador_info_list})
         }
         else
@@ -237,9 +271,21 @@ export const patchServiceCancelationService = async(serviceCancelation: ServiceC
         const {num_saldo_horas} = user
         const num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas
 
+        const serviceProviders = await findServiceProviderUsers({id_servico: id_servico})
+
         const result: TransactionResult = await updateServiceCancelation({id_servico, id_usuario_solicitante, num_saldo_horas_reajuste})
          
         if (result.success){ 
+            let receivers = serviceProviders.map(elem=>elem.cod_email_usuario_prestador)
+            receivers.push(service.cod_email_usuario)
+            const subject = `Cancelamento do Serviço ${id_servico}: ${service.nom_servico}`
+            const text = `Olá! Serviço ${id_servico} cancelado!`
+            const emailNotification = await sendEmail(receivers, subject, text)
+
+            if (emailNotification.success) {
+                console.log('Enviado')
+            }
+
             response = await ok({message: result.message, id_servico: result.id})
         }
         else

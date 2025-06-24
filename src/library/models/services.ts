@@ -37,5 +37,7 @@ interface ServiceProviderUsersModel{
     cod_email_usuario: string
     num_nota_avaliacao: number | any
     desc_comentario_avaliacao: string | any
+    nom_usuario_prestador: string
+    cod_email_usuario_prestador: string
 }
 export { ServiceModel, ServiceSkillsModel, ServiceCategoriesModel, ServiceProviderUsersModel}
