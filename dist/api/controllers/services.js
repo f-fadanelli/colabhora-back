@@ -1,8 +1,10 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
 var __objRest = (source, exclude) => {
@@ -29,6 +31,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -435,6 +445,36 @@ var badRequest = (message) => __async(null, null, function* () {
   };
 });
 
+// src/library/utils/mails.ts
+var import_nodemailer = __toESM(require("nodemailer"));
+var sendEmail = (receiverEmail, subject, text) => __async(null, null, function* () {
+  try {
+    const transport = import_nodemailer.default.createTransport({
+      host: process.env.MAIL_HOST,
+      port: process.env.MAIL_PORT,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD
+      }
+    });
+    const mailOptions = {
+      from: process.env.MAIL_USER,
+      to: receiverEmail,
+      subject,
+      text
+    };
+    const info = yield transport.sendMail(mailOptions);
+    if (info) {
+      return { success: true, message: "Success" };
+    } else {
+      console.log(info);
+      return { success: false, message: "Fail" };
+    }
+  } catch (err) {
+    return { success: false, message: err };
+  }
+});
+
 // src/api/services/services.ts
 var getServiceService = (filter) => __async(null, null, function* () {
   let data = yield findAllServices(filter);
@@ -498,6 +538,13 @@ var postServiceService = (service) => __async(null, null, function* () {
         }
         const result = yield insertService(service);
         if (result.success) {
+          const subject = `Cria\xE7\xE3o de Servi\xE7o ${result.id}: ${service.nom_servico}`;
+          const text = `Ol\xE1, ${user2.nom_usuario}! Seu novo servi\xE7o foi criado com o c\xF3digo ${result.id}!`;
+          const receivers = [user2.cod_email_usuario];
+          const emailNotification = yield sendEmail(receivers, subject, text);
+          if (emailNotification.success) {
+            console.log("Enviado");
+          }
           response = yield created(result.id);
         } else
           response = yield badRequest(result.message);
@@ -519,8 +566,11 @@ var patchServiceProvidersService = (serviceProvider) => __async(null, null, func
   const userSkillsIds = userSkills.map((elem) => elem.id_habilidade);
   const hasAllSkills = serviceSkillsIds.every((elem) => userSkillsIds.includes(elem));
   if (hasAllSkills) {
-    const service = yield findAllServices({ id_servico });
-    const { dth_servico, dth_fim_servico, num_qtd_prestadores, num_qtd_prestadores_confirmados } = service[0];
+    const providerUserSearch = yield findAllUsers({ id_usuario: id_usuario_prestador });
+    const providerUser = providerUserSearch[0];
+    const serviceSearch = yield findAllServices({ id_servico });
+    const service = serviceSearch[0];
+    const { dth_servico, dth_fim_servico, num_qtd_prestadores, num_qtd_prestadores_confirmados } = service;
     const dateConflict = yield findConflictServices({ id_usuario: id_usuario_prestador, dth_servico, dth_fim_servico });
     if (dateConflict.length > 0) {
       response = yield badRequest("N\xE3o \xE9 poss\xEDvel criar o servi\xE7o por conta de conflitos de hor\xE1rios!");
@@ -536,6 +586,13 @@ var patchServiceProvidersService = (serviceProvider) => __async(null, null, func
         }
         const result = yield updateServiceProviders({ id_servico, id_usuario_prestador, id_novo_status });
         if (result.success) {
+          const subject = `Aceite do Servi\xE7o ${id_servico}: ${service.nom_servico}`;
+          const text = `Ol\xE1! Servi\xE7o ${id_servico} aceito por ${providerUser.nom_usuario}!`;
+          const receivers = [providerUser.cod_email_usuario, service.cod_email_usuario];
+          const emailNotification = yield sendEmail(receivers, subject, text);
+          if (emailNotification.success) {
+            console.log("Enviado");
+          }
           response = yield ok(result.id);
         } else
           response = yield badRequest(result.message);
@@ -563,9 +620,17 @@ var patchServiceFinalizationService = (serviceFinalization) => __async(null, nul
     const id_usuario_prestador_list = serviceProviders.map((elem) => parseInt(elem.id_usuario_prestador));
     const result = yield updateServiceFinalization({ id_servico, id_usuario_solicitante, num_saldo_horas_reajuste, num_tempo_estimado, id_usuario_prestador_list });
     const usuario_prestador_info_list = serviceProviders.map((elem) => {
-      return { id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario };
+      return { id_usuario_prestador: elem.id_usuario_prestador, nom_usuario: elem.nom_usuario_prestador };
     });
     if (result.success) {
+      let receivers = serviceProviders.map((elem) => elem.cod_email_usuario_prestador);
+      receivers.push(service.cod_email_usuario);
+      const subject = `Finaliza\xE7\xE3o do Servi\xE7o ${id_servico}: ${service.nom_servico}`;
+      const text = `Ol\xE1! Servi\xE7o ${id_servico} finalizado com sucesso!`;
+      const emailNotification = yield sendEmail(receivers, subject, text);
+      if (emailNotification.success) {
+        console.log("Enviado");
+      }
       response = yield ok({ message: result.message, id_servico: result.id, avaliar_usuarios: usuario_prestador_info_list });
     } else
       response = yield badRequest(result.message);
@@ -585,8 +650,17 @@ var patchServiceCancelationService = (serviceCancelation) => __async(null, null,
     const user2 = userSearch[0];
     const { num_saldo_horas } = user2;
     const num_saldo_horas_reajuste = num_saldo_horas + devolucao_horas;
+    const serviceProviders = yield findServiceProviderUsers({ id_servico });
     const result = yield updateServiceCancelation({ id_servico, id_usuario_solicitante, num_saldo_horas_reajuste });
     if (result.success) {
+      let receivers = serviceProviders.map((elem) => elem.cod_email_usuario_prestador);
+      receivers.push(service.cod_email_usuario);
+      const subject = `Cancelamento do Servi\xE7o ${id_servico}: ${service.nom_servico}`;
+      const text = `Ol\xE1! Servi\xE7o ${id_servico} cancelado!`;
+      const emailNotification = yield sendEmail(receivers, subject, text);
+      if (emailNotification.success) {
+        console.log("Enviado");
+      }
       response = yield ok({ message: result.message, id_servico: result.id });
     } else
       response = yield badRequest(result.message);
