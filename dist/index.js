@@ -241,6 +241,21 @@ var forbidden = () => __async(null, null, function* () {
   };
 });
 
+// src/library/utils/general.ts
+var arraysNumericosIguais = (arr1, arr2) => {
+  if (arr1.length !== arr2.length) return false;
+  return arr1.every((valor, indice) => valor === arr2[indice]);
+};
+var decimalParaHorasEMinutos = (decimal) => {
+  const horas = Math.floor(decimal);
+  const minutos = Math.round((decimal - horas) * 60);
+  let resultado = `${horas}h`;
+  if (minutos !== 0) {
+    resultado += ` ${minutos}min`;
+  }
+  return resultado;
+};
+
 // src/api/services/users.ts
 var JWT_SECRET = process.env.JWT_SECRET || "meu_secret";
 var getUserService = (filter) => __async(null, null, function* () {
@@ -249,6 +264,7 @@ var getUserService = (filter) => __async(null, null, function* () {
   if (data.length > 0) {
     data.forEach((elem) => {
       delete elem["cod_senha_usuario"];
+      elem["num_saldo_horas_st"] = decimalParaHorasEMinutos(elem.num_saldo_horas);
     });
     response = yield ok(data);
   } else {
@@ -1200,12 +1216,6 @@ var updateServiceRate = (serviceRate) => __async(null, null, function* () {
   }
 });
 
-// src/library/utils/general.ts
-var arraysNumericosIguais = (arr1, arr2) => {
-  if (arr1.length !== arr2.length) return false;
-  return arr1.every((valor, indice) => valor === arr2[indice]);
-};
-
 // src/library/utils/mails.ts
 var import_nodemailer = __toESM(require("nodemailer"));
 var sendEmail = (receiverEmail, subject, text) => __async(null, null, function* () {
@@ -1241,6 +1251,9 @@ var getServiceService = (filter) => __async(null, null, function* () {
   let data = yield findAllServices(filter);
   let response;
   if (data.length > 0) {
+    data.forEach((elem) => {
+      elem["num_tempo_estimado_st"] = decimalParaHorasEMinutos(elem.num_tempo_estimado);
+    });
     response = yield ok(data);
   } else {
     response = yield noContent();

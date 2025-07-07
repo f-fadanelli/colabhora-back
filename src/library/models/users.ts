@@ -6,6 +6,7 @@ interface UserModel{
     cod_email_usuario: string
     cod_senha_usuario: string | any
     num_saldo_horas: number
+    num_saldo_horas_st: string | any
     id_cidade: number
     desc_endereco: string
     flg_tipo_usuario: string

@@ -571,6 +571,15 @@ var arraysNumericosIguais = (arr1, arr2) => {
   if (arr1.length !== arr2.length) return false;
   return arr1.every((valor, indice) => valor === arr2[indice]);
 };
+var decimalParaHorasEMinutos = (decimal) => {
+  const horas = Math.floor(decimal);
+  const minutos = Math.round((decimal - horas) * 60);
+  let resultado = `${horas}h`;
+  if (minutos !== 0) {
+    resultado += ` ${minutos}min`;
+  }
+  return resultado;
+};
 
 // src/library/utils/mails.ts
 var import_nodemailer = __toESM(require("nodemailer"));
@@ -607,6 +616,9 @@ var getServiceService = (filter) => __async(null, null, function* () {
   let data = yield findAllServices(filter);
   let response;
   if (data.length > 0) {
+    data.forEach((elem) => {
+      elem["num_tempo_estimado_st"] = decimalParaHorasEMinutos(elem.num_tempo_estimado);
+    });
     response = yield ok(data);
   } else {
     response = yield noContent();

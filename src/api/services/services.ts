@@ -4,7 +4,7 @@ import { TransactionResult } from "../../library/models/transaction-response"
 import { findAllServices, findConflictServices, findServiceCategories, findServiceProviderUsers, findServiceSkills, insertService, updateServiceCancelation, updateServiceFinalization, updateServiceProviders, updateServiceRate } from "../../library/repositories/services"
 import { findAllUsers, findUserSkills } from "../../library/repositories/users"
 import { ServiceCancelationUpdate, ServiceCategoriesSearch, ServiceFinalizationUpdate, ServiceInput, ServiceProviderUpdate, ServiceProviderUsersSearch, ServiceRateUpdate, ServiceSearch, ServiceSkillsSearch } from "../../library/schemas/services"
-import { arraysNumericosIguais } from "../../library/utils/general"
+import { arraysNumericosIguais, decimalParaHorasEMinutos } from "../../library/utils/general"
 
 import { badRequest, created, noContent, ok } from "../../library/utils/http-response"
 import { sendEmail } from "../../library/utils/mails"
@@ -15,6 +15,11 @@ export const getServiceService = async(filter: ServiceSearch):Promise<HttpRespon
     let response
     
     if(data.length>0){
+
+        data.forEach((elem)=> {
+            elem['num_tempo_estimado_st'] = decimalParaHorasEMinutos(elem.num_tempo_estimado)
+        })
+
         response = await ok(data)
     }
     else{

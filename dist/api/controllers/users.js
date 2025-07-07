@@ -236,6 +236,17 @@ var badRequest = (message) => __async(null, null, function* () {
   };
 });
 
+// src/library/utils/general.ts
+var decimalParaHorasEMinutos = (decimal) => {
+  const horas = Math.floor(decimal);
+  const minutos = Math.round((decimal - horas) * 60);
+  let resultado = `${horas}h`;
+  if (minutos !== 0) {
+    resultado += ` ${minutos}min`;
+  }
+  return resultado;
+};
+
 // src/api/services/users.ts
 var JWT_SECRET = process.env.JWT_SECRET || "meu_secret";
 var getUserService = (filter) => __async(null, null, function* () {
@@ -244,6 +255,7 @@ var getUserService = (filter) => __async(null, null, function* () {
   if (data.length > 0) {
     data.forEach((elem) => {
       delete elem["cod_senha_usuario"];
+      elem["num_saldo_horas_st"] = decimalParaHorasEMinutos(elem.num_saldo_horas);
     });
     response = yield ok(data);
   } else {

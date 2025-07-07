@@ -8,6 +8,7 @@ interface ServiceModel{
     dth_servico: Date
     dth_fim_servico: Date
     num_tempo_estimado: number
+    num_tempo_estimado_st: string | any
     num_qtd_prestadores: number
     id_status: number
     nom_usuario: string

@@ -8,6 +8,7 @@ import { findAllUsers, findUserSkills, insertUser, updateUser } from "../../libr
 import { UserInput, UserSearch, UserSkillsSearch, UserUpdate, UserValidate } from "../../library/schemas/users"
 
 import { badRequest, created, noContent, ok } from "../../library/utils/http-response"
+import { decimalParaHorasEMinutos } from '../../library/utils/general';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'meu_secret'
 
@@ -20,6 +21,7 @@ export const getUserService = async(filter: UserSearch):Promise<HttpResponseMode
 
         data.forEach((elem)=> {
             delete elem['cod_senha_usuario']
+            elem['num_saldo_horas_st'] = decimalParaHorasEMinutos(elem.num_saldo_horas)
         })
 
         response = await ok(data)

@@ -20,14 +20,25 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/library/utils/general.ts
 var general_exports = {};
 __export(general_exports, {
-  arraysNumericosIguais: () => arraysNumericosIguais
+  arraysNumericosIguais: () => arraysNumericosIguais,
+  decimalParaHorasEMinutos: () => decimalParaHorasEMinutos
 });
 module.exports = __toCommonJS(general_exports);
 var arraysNumericosIguais = (arr1, arr2) => {
   if (arr1.length !== arr2.length) return false;
   return arr1.every((valor, indice) => valor === arr2[indice]);
 };
+var decimalParaHorasEMinutos = (decimal) => {
+  const horas = Math.floor(decimal);
+  const minutos = Math.round((decimal - horas) * 60);
+  let resultado = `${horas}h`;
+  if (minutos !== 0) {
+    resultado += ` ${minutos}min`;
+  }
+  return resultado;
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  arraysNumericosIguais
+  arraysNumericosIguais,
+  decimalParaHorasEMinutos
 });
