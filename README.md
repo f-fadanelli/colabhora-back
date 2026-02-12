@@ -12,4 +12,4 @@ A aplicação permite que usuários ofereçam e solicitem serviços dentro de um
 - **TypeScript**
 - **Express**
 - **JWT** para autenticação
-- **PostgreSQL **
+- **PostgreSQL**
